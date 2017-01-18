@@ -1,0 +1,9 @@
+---
+# file: tasks/ubuntu.yml
+
+- name: Install python-pip (for Ubuntu)
+  run_once: true
+  become: yes
+  local_action:
+    module: apt
+    name: python-pip
