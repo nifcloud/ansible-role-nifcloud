@@ -1,0 +1,13 @@
+galaxy_info:
+  author: NIFTYCloud mobile backend team
+  description: Ansible role for importing module of NIFTYCloud
+  company: NIFTY Corporation
+  license: Apache License, Version 2.0
+  min_ansible_version: 1.9.4
+  platforms:
+    - name: CentOS
+      versions:
+        - 6
+        - 7
+  galaxy_tags: []
+dependencies: []

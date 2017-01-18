@@ -1,0 +1,51 @@
+---
+# tasks file for ansible-role-niftycloud
+
+- name: Gathering facts from localhost
+  run_once: true
+  local_action:
+    module: setup
+
+- name: Check localhost distribution
+  run_once: true
+  local_action:
+    module: assert
+    that:
+      - "ansible_distribution == 'CentOS'"
+
+- name: Import EPEL GPG Key
+  run_once: true
+  local_action:
+    module: rpm_key
+    key: "https://download.fedoraproject.org/pub/epel/RPM-GPG-KEY-EPEL-{{ ansible_distribution_major_version }}"
+
+- name: Check EPEL repository
+  run_once: true
+  local_action:
+    module: yum
+    name: epel-release
+    state: present
+  register: niftycloud_check_epel_results
+  ignore_errors: yes
+
+- name: Add EPEL repository
+  run_once: true
+  local_action:
+    module: yum
+    name: "https://download.fedoraproject.org/pub/epel/epel-release-latest-{{ ansible_distribution_major_version }}.noarch.rpm"
+  when: niftycloud_check_epel_results|failed
+
+- name: Install python-pip
+  run_once: true
+  become: yes
+  local_action:
+    module: yum
+    name: python-pip
+
+- name: Install "Requests" python package
+  run_once: true
+  become: yes
+  local_action:
+    module: pip
+    name: requests
+    version: 2.5.3
