@@ -6,7 +6,7 @@ Ansible role for importing module of NIFTYCloud
 Requirements
 ------------
 
-* Distribution = CentOS
+* Distribution = CentOS / Ubuntu
 * python >= 2.6 (localhost)
 
 Role Variables
