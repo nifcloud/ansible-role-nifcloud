@@ -287,6 +287,70 @@ niftycloud_api_response_sample = dict(
 <DescribeLoadBalancersResult>
  <LoadBalancerDescriptions>
   <member>
+  <LoadBalancerName>lb000</LoadBalancerName>
+  <DNSName>111.171.200.1</DNSName>
+  <NetworkVolume>10</NetworkVolume>
+  <ListenerDescriptions>
+   <member>
+   <Listener>
+    <Protocol>HTTP</Protocol>
+    <LoadBalancerPort>80</LoadBalancerPort>
+    <InstancePort>80</InstancePort>
+    <balancingType>1</balancingType>
+    <SSLCertificateId>100</SSLCertificateId>
+   </Listener>
+   </member>
+  </ListenerDescriptions>
+  <Policies>
+   <AppCookieStickinessPolicies>
+    <member>
+     <PolicyName/>
+     <CookieName/>
+    </member>
+   </AppCookieStickinessPolicies>
+   <LBCookieStickinessPolicies>
+    <member>
+     <PolicyName/>
+     <CookieExpirationPeriod/>
+    </member>
+   </LBCookieStickinessPolicies>
+  </Policies>
+  <AvailabilityZones>
+   <member>east-11</member>
+  </AvailabilityZones>
+  <Instances>
+  </Instances>
+  <HealthCheck>
+   <Target>TCP:80</Target>
+   <Interval>300</Interval>
+   <Timeout>900</Timeout>
+   <UnhealthyThreshold>3</UnhealthyThreshold>
+   <HealthyThreshold>1</HealthyThreshold>
+  </HealthCheck>
+  <Filter>
+   <FilterType>1</FilterType>
+   <IPAddresses>
+    <member>
+     <IPAddress>111.111.111.111</IPAddress>
+     <IPAddress>111.111.111.112</IPAddress>
+    </member>
+   </IPAddresses>
+  </Filter>
+  <CreatedTime>2010-05-17T11:22:33.456Z</CreatedTime>
+  <AccountingType>1</AccountingType>
+  <NextMonthAccountingType>1</NextMonthAccountingType>
+  <Option> 
+    <SessionStickinessPolicy> 
+      <Enabled>true</Enabled>
+      <ExpirationPeriod>10</ExpirationPeriod>
+    </SessionStickinessPolicy>
+    <SorryPage>
+      <Enabled>true</Enabled>
+      <StatusCode>200</StatusCode>
+    </SorryPage>
+  </Option>
+  </member>
+  <member>
   <LoadBalancerName>lb001</LoadBalancerName>
   <DNSName>111.171.200.1</DNSName>
   <NetworkVolume>10</NetworkVolume>
@@ -352,8 +416,8 @@ niftycloud_api_response_sample = dict(
   <CreatedTime>2010-05-17T11:22:33.456Z</CreatedTime>
   <AccountingType>1</AccountingType>
   <NextMonthAccountingType>1</NextMonthAccountingType>
-  <Option>    
-    <SessionStickinessPolicy> 
+  <Option>
+    <SessionStickinessPolicy>
       <Enabled>true</Enabled>
       <ExpirationPeriod>10</ExpirationPeriod>
     </SessionStickinessPolicy>

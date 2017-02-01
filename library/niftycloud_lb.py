@@ -154,6 +154,8 @@ def deregist_instance(module):
 		changed = False
 		deregister_lbs = list()
 		for member in lbs_res['xml_body'].findall('.//{{{nc}}}LoadBalancerDescriptions/{{{nc}}}member'.format(**lbs_res['xml_namespace'])):
+			if member.find('.//{{{nc}}}InstanceId'.format(**lbs_res['xml_namespace'])) is None:
+				continue
 			instance_id = member.find('.//{{{nc}}}InstanceId'.format(**lbs_res['xml_namespace'])).text
 			if instance_id != module.params['instance_id']:
 				continue
