@@ -26,7 +26,8 @@ class TestNiftycloud(unittest.TestCase):
 				ip_type = 'static',
 				public_ip = None,
 				startup_script = '{0}/files/startup_script'.format(os.path.dirname(__file__)),
-				startup_script_vars = dict(debug_var = 'DEBUG')
+				startup_script_vars = dict(debug_var = 'DEBUG'),
+			        network_interface = [dict(network_id='net-COMMON_GLOBAL', ipAddress='0.0.0.0'), dict(network_id='net-COMMON_PRIVATE', ipAddress='static')]
 			),
 			fail_json = mock.MagicMock(side_effect=Exception('failed'))
 		)
