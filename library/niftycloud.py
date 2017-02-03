@@ -80,6 +80,12 @@ options:
 		type: Dictionary
 		required: false
 		default: {}
+        network_interface:
+                description:
+                        - NetworkInterface
+                type: List
+		required: false
+		default: []
 '''
 
 EXAMPLES = '''
@@ -173,6 +179,14 @@ def create_instance(module):
 
 	if module.params['public_ip'] is not None:
 		params['PublicIp'] = module.params['public_ip']
+
+        for n, network_interface in  enumerate(module.params['network_interface'], start=1):
+                if network_interface.get('network_id') is not None:
+                        params['NetworkInterface.'+str(n)+'.NetworkId'] = network_interface.get('network_id')
+                if network_interface.get('network_name')is not None:
+                        params['NetworkInterface.'+str(n)+'.NetworkName'] = network_interface.get('network_name')
+                if network_interface.get('ipAddress') is not None:
+                        params['NetworkInterface.'+str(n)+'.IpAddress'] = network_interface.get('ipAddress')
 
 	startup_script_path = module.params['startup_script']
 	startup_script_vars = module.params['startup_script_vars']
@@ -312,7 +326,8 @@ def main():
 			ip_type             = dict(required=False, type='str',  default=None),
 			public_ip           = dict(required=False, type='str',  default=None),
 			startup_script      = dict(required=False, type='str',  default=None),
-			startup_script_vars = dict(required=False, type='dict', deafult={})
+			startup_script_vars = dict(required=False, type='dict', deafult={}),
+			network_interface   = dict(required=False, type='list', deafult=[]),
 		)
 	)
 
