@@ -312,7 +312,7 @@ def main():
 			ip_type             = dict(required=False, type='str',  default=None),
 			public_ip           = dict(required=False, type='str',  default=None),
 			startup_script      = dict(required=False, type='str',  default=None),
-			startup_script_vars = dict(required=False, type='dict', deafult={})
+			startup_script_vars = dict(required=False, type='dict', default={})
 		)
 	)
 
