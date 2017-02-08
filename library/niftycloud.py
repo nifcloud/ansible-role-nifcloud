@@ -141,6 +141,24 @@ def get_instance_state(module):
 	else:
 		return -1
 
+def configure_user_data(module, params):
+	startup_script_path = module.params['startup_script']
+	startup_script_vars = module.params['startup_script_vars']
+
+	if not startup_script_path:
+		return
+
+	try:
+		with open(startup_script_path, 'r') as fp:
+			startup_script_template = fp.read()
+			startup_script = startup_script_template.format(**startup_script_vars)
+
+			params['UserData']          = base64.b64encode(startup_script)
+			params['UserData.Encoding'] = 'base64'
+	except IOError:
+		if 'UserData' in params: del params['UserData']
+		if 'UserData.Encoding' in params: del params['UserData.Encoding']
+
 def create_instance(module):
 	goal_state = 16
 
@@ -174,20 +192,7 @@ def create_instance(module):
 	if module.params['public_ip'] is not None:
 		params['PublicIp'] = module.params['public_ip']
 
-	startup_script_path = module.params['startup_script']
-	startup_script_vars = module.params['startup_script_vars']
-
-	try:
-		with open(startup_script_path, 'r') as fp:
-			startup_script_template = fp.read()
-			startup_script = startup_script_template.format(**startup_script_vars)
-
-			params['UserData']          = base64.b64encode(startup_script)
-			params['UserData.Encoding'] = 'base64'
-
-	except IOError:
-		if 'UserData' in params: del params['UserData']
-		if 'UserData.Encoding' in params: del params['UserData.Encoding']
+	configure_user_data(module, params)
 
 	res = request_to_api(module, 'POST', 'RunInstances', params)
 
@@ -226,18 +231,7 @@ def start_instance(module, current_state):
 		startup_script_path = module.params['startup_script']
 		startup_script_vars = module.params['startup_script_vars']
 
-		if startup_script_path is not None:
-			try:
-				with open(startup_script_path, 'r') as fp:
-					startup_script_template = fp.read()
-					startup_script = startup_script_template.format(**startup_script_vars)
-
-					params['UserData']          = base64.b64encode(startup_script)
-					params['UserData.Encoding'] = 'base64'
-
-			except IOError:
-				if 'UserData' in params: del params['UserData']
-				if 'UserData.Encoding' in params: del params['UserData.Encoding']
+		configure_user_data(module, params)		
 
 		res = request_to_api(module, 'POST', 'StartInstances', params)
 
