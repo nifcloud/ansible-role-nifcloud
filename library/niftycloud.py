@@ -80,6 +80,12 @@ options:
 		type: Dictionary
 		required: false
 		default: {}
+        network_interface:
+                description:
+                        - NetworkInterface
+                type: List
+		required: false
+		default: []
 '''
 
 EXAMPLES = '''
@@ -142,7 +148,7 @@ def get_instance_state(module):
 		return -1
 
 def create_instance(module):
-	goal_state = 16
+	goal_state = [16, 96]
 
 	if module.params['image_id'] is None:
 		module.fail_json(status=-1, msg='missing required arguments: image_id')
@@ -174,6 +180,14 @@ def create_instance(module):
 	if module.params['public_ip'] is not None:
 		params['PublicIp'] = module.params['public_ip']
 
+        for n, network_interface in  enumerate(module.params['network_interface'], start=1):
+                if network_interface.get('network_id') is not None:
+                        params['NetworkInterface.'+str(n)+'.NetworkId'] = network_interface.get('network_id')
+                if network_interface.get('network_name')is not None:
+                        params['NetworkInterface.'+str(n)+'.NetworkName'] = network_interface.get('network_name')
+                if network_interface.get('ipAddress') is not None:
+                        params['NetworkInterface.'+str(n)+'.IpAddress'] = network_interface.get('ipAddress')
+
 	startup_script_path = module.params['startup_script']
 	startup_script_vars = module.params['startup_script_vars']
 
@@ -194,12 +208,12 @@ def create_instance(module):
 	if res['status'] == 200:
                 current_state = int(res['xml_body'].find('.//{{{nc}}}instanceState/{{{nc}}}code'.format(**res['xml_namespace'])).text)
 		retry_count = 10
-		while retry_count > 0 and current_state != goal_state:
+		while retry_count > 0 and current_state not in goal_state:
 			time.sleep(60)
 			current_state = get_instance_state(module)
  			if current_state < 0: retry_count -= 1
 
-		if current_state == goal_state:
+		if current_state in goal_state:
 			return (True, current_state, 'created')
 		else:
 			module.fail_json(status=-1, instance_id=module.params['instance_id'], msg='changes failed (create_instance)')
@@ -312,7 +326,8 @@ def main():
 			ip_type             = dict(required=False, type='str',  default=None),
 			public_ip           = dict(required=False, type='str',  default=None),
 			startup_script      = dict(required=False, type='str',  default=None),
-			startup_script_vars = dict(required=False, type='dict', deafult={})
+			startup_script_vars = dict(required=False, type='dict', deafult={}),
+			network_interface   = dict(required=False, type='list', deafult=[]),
 		)
 	)
 
