@@ -95,6 +95,19 @@ class TestNiftycloud(unittest.TestCase):
 		self.assertEqual(etree.tostring(info['xml_body']),
 				 etree.tostring(etree.fromstring(self.xml['describeLoadBalancers'])))
 
+	# api error
+	def test_request_to_api_error(self):
+		method = 'GET'
+		action = 'DescribeLoadBalancers'
+		params = dict()
+
+		with mock.patch('requests.get', self.mockRequestsInternalServerError):
+			info = niftycloud_lb.request_to_api(self.mockModule, method, action, params)
+
+		self.assertEqual(info['status'], 500)
+		self.assertEqual(etree.tostring(info['xml_body']),
+				 etree.tostring(etree.fromstring(self.xml['internalServerError'])))
+
 	# method failed
 	def test_request_to_api_unknown(self):
 		method = 'UNKNOWN'
@@ -108,7 +121,7 @@ class TestNiftycloud(unittest.TestCase):
 		)
 
 	# network error
-	def test_request_to_api_error(self):
+	def test_request_to_api_request_error(self):
 		method = 'GET'
 		action = 'DescribeLoadBalancers'
 		params = dict()
