@@ -182,6 +182,23 @@ class TestNiftycloud(unittest.TestCase):
 				(self.mockModule, method, action, params)
 			)
 
+	# get api error code & message
+	def test_get_api_error(self):
+		method = 'GET'
+		action = 'DescribeInstances'
+		params = dict(
+			ImageId = self.mockModule.params['image_id'],
+			KeyName = self.mockModule.params['key_name'],
+			InstanceId = self.mockModule.params['instance_id']
+		)
+
+		with mock.patch('requests.get', self.mockRequestsInternalServerError):
+			info = niftycloud.request_to_api(self.mockModule, method, action, params)
+
+		error_info = niftycloud.get_api_error(info['xml_body'])
+		self.assertEqual(error_info['code'],    'Server.InternalError')
+		self.assertEqual(error_info['message'], 'An error has occurred. Please try again later.')
+
 	# running
 	def test_get_instance_state_present(self):
 		with mock.patch('requests.get', self.mockRequestsGetDescribeInstance):
