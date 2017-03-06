@@ -132,6 +132,23 @@ class TestNiftycloud(unittest.TestCase):
 		self.assertEqual(etree.tostring(info['xml_body']),
 				 etree.tostring(etree.fromstring(self.xml['runInstance'])))
 
+	# api error
+	def test_request_to_api_error(self):
+		method = 'GET'
+		action = 'DescribeInstances'
+		params = dict(
+			ImageId = self.mockModule.params['image_id'],
+			KeyName = self.mockModule.params['key_name'],
+			InstanceId = self.mockModule.params['instance_id']
+		)
+
+		with mock.patch('requests.get', self.mockRequestsInternalServerError):
+			info = niftycloud.request_to_api(self.mockModule, method, action, params)
+
+		self.assertEqual(info['status'], 500)
+		self.assertEqual(etree.tostring(info['xml_body']),
+				 etree.tostring(etree.fromstring(self.xml['internalServerError'])))
+
 	# method failed
 	def test_request_to_api_unknown(self):
 		method = 'UNKNOWN'
@@ -149,7 +166,7 @@ class TestNiftycloud(unittest.TestCase):
 		)
 
 	# network error
-	def test_request_to_api_error(self):
+	def test_request_to_api_request_error(self):
 		method = 'GET'
 		action = 'DescribeInstances'
 		params = dict(
