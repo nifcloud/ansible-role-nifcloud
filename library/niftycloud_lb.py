@@ -95,6 +95,13 @@ def request_to_api(module, method, action, params):
 	else:
 		module.fail_json(status=-1, msg='changes failed (http request failed)')
 
+def get_api_error(xml_body):
+	info = dict(
+		code    = xml_body.find('.//Errors/Error/Code').text,
+		message = xml_body.find('.//Errors/Error/Message').text
+	)
+	return info
+
 def describe_load_balancers(module, params):
 	return request_to_api(module, 'GET', 'DescribeLoadBalancers', params)
 

@@ -133,6 +133,19 @@ class TestNiftycloud(unittest.TestCase):
 				(self.mockModule, method, action, params)
 			)
 
+	# get api error code & message
+	def test_get_api_error(self):
+		method = 'GET'
+		action = 'DescribeLoadBalancers'
+		params = dict()
+
+		with mock.patch('requests.get', self.mockRequestsInternalServerError):
+			info = niftycloud_lb.request_to_api(self.mockModule, method, action, params)
+
+		error_info = niftycloud_lb.get_api_error(info['xml_body'])
+		self.assertEqual(error_info['code'],    'Server.InternalError')
+		self.assertEqual(error_info['message'], 'An error has occurred. Please try again later.')
+
 	# describe
 	def test_describe_load_balancers(self):
 		with mock.patch('requests.get', self.mockRequestsGetDescribeLoadBalancers):
