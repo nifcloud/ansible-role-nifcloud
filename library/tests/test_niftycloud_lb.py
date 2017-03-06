@@ -55,7 +55,7 @@ class TestNiftycloud(unittest.TestCase):
 		self.mockRequestsInternalServerError = mock.MagicMock(
 			return_value=mock.MagicMock(
 				status_code = 500,
-				text = self.xml['describeLoadBalancers']
+				text = self.xml['internalServerError']
 			))
 
 		self.mockRequestsError = mock.MagicMock(return_value=None)
@@ -463,6 +463,17 @@ niftycloud_api_response_sample = dict(
     <RequestId>f6dd8353-eb6b-6b4fd32e4f05</RequestId>
   </ResponseMetadata>
 </DeregisterInstancesFromLoadBalancerResponse>
+''',
+	internalServerError = '''
+<Response>
+ <Errors>
+  <Error>
+   <Code>Server.InternalError</Code>
+   <Message>An error has occurred. Please try again later.</Message>
+  </Error>
+ </Errors>
+ <RequestID>5ec8da0a-6e23-4343-b474-ca0bb5c22a51</RequestID>
+</Response>
 '''
 )
 
