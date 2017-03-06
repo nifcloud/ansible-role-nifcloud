@@ -230,7 +230,14 @@ def create_instance(module):
 		else:
 			module.fail_json(status=-1, instance_id=module.params['instance_id'], msg='changes failed (create_instance)')
 	else:
-		module.fail_json(status=-1, instance_id=module.params['instance_id'], msg='changes failed (create_instance)')
+		error_info = get_api_error(res['xml_body'])
+		module.fail_json(
+			status=-1,
+			instance_id=module.params['instance_id'],
+			msg='changes failed (create_instance)',
+			error_code=error_info.get('code'),
+			error_message=error_info.get('message')
+		)
 
 def start_instance(module, current_state):
 	goal_state = 16
@@ -266,7 +273,14 @@ def start_instance(module, current_state):
 			else:
 				module.fail_json(status=current_state, instance_id=module.params['instance_id'], msg='changes failed (start_instance)')
 		else:
-			module.fail_json(status=-1, instance_id=module.params['instance_id'], msg='changes failed (start_instance)')
+			error_info = get_api_error(res['xml_body'])
+			module.fail_json(
+				status=-1,
+				instance_id=module.params['instance_id'],
+				msg='changes failed (start_instance)',
+				error_code=error_info.get('code'),
+				error_message=error_info.get('message')
+			)
 
 def stop_instance(module, current_state):
 	goal_state = 80
@@ -294,7 +308,14 @@ def stop_instance(module, current_state):
 		else:
 			module.fail_json(status=current_state, instance_id=module.params['instance_id'], msg='changes failed (stop_instance)')
 	else:
-		module.fail_json(status=-1, instance_id=module.params['instance_id'], msg='changes failed (stop_instance)')
+		error_info = get_api_error(res['xml_body'])
+		module.fail_json(
+			status=-1,
+			instance_id=module.params['instance_id'],
+			msg='changes failed (stop_instance)',
+			error_code=error_info.get('code'),
+			error_message=error_info.get('message')
+		)
 
 def restart_instance(module, current_state):
 	changed = False

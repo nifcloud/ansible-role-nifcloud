@@ -118,7 +118,13 @@ def get_state_instance_in_load_balancer(module):
 				return 'present'
 		return 'absent'
 	else:
-		module.fail_json(status=-1, msg='check current state failed')
+		error_info = get_api_error(res['xml_body'])
+		module.fail_json(
+			status=-1,
+			msg='check current state failed',
+			error_code=error_info.get('code'),
+			error_message=error_info.get('message')
+		)
 
 def is_present_in_load_balancer(module):
 	return True if get_state_instance_in_load_balancer(module) == 'present' else False
@@ -151,7 +157,13 @@ def regist_instance(module):
 		current_status = get_state_instance_in_load_balancer(module)
 		return (True, current_status)
 	else:
-		module.fail_json(status=-1, msg='changes failed (regist_instance)')
+		error_info = get_api_error(res['xml_body'])
+		module.fail_json(
+			status=-1,
+			msg='changes failed (regist_instance)',
+			error_code=error_info.get('code'),
+			error_message=error_info.get('message')
+		)
 
 def deregist_instance(module):
 	params = dict()
@@ -192,10 +204,22 @@ def deregist_instance(module):
 				deregister_lbs.append(lb_label)
 				changed = True
 			else:
-				module.fail_json(status=-1, msg='changes failed (deregist_instance)')
+				error_info = get_api_error(res['xml_body'])
+				module.fail_json(
+					status=-1,
+					msg='changes failed (deregist_instance)',
+					error_code=error_info.get('code'),
+					error_message=error_info.get('message')
+				)
 		return (changed, 'absent(' + ','.join(deregister_lbs) + ')')
 	else:
-		module.fail_json(status=-1, msg='get load balancers information failed')
+		error_info = get_api_error(lbs_res['xml_body'])
+		module.fail_json(
+			status=-1,
+			msg='get load balancers information failed',
+			error_code=error_info.get('code'),
+			error_message=error_info.get('message')
+		)
 
 def main():
 	module = AnsibleModule(

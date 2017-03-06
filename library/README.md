@@ -26,9 +26,9 @@
 ```
 Name                   Stmts   Miss  Cover
 ------------------------------------------
-niftycloud.py            175     16    91%
-niftycloud_lb.py         121     10    92%
-niftycloud_volume.py     103     14    86%
+niftycloud.py            178     20    89%
+niftycloud_lb.py         125     14    89%
+niftycloud_volume.py     105     16    85%
 ------------------------------------------
-TOTAL                    399     40    90%
+TOTAL                    408     50    88%
 ```
