@@ -49,7 +49,7 @@ class TestNiftycloud(unittest.TestCase):
 		self.mockRequestsInternalServerError = mock.MagicMock(
 			return_value=mock.MagicMock(
 				status_code = 500,
-				text = self.xml['describeVolumes']
+				text = self.xml['internalServerError']
 			))
 
 		self.mockRequestsError = mock.MagicMock(return_value=None)
@@ -282,6 +282,17 @@ niftycloud_api_response_sample = dict(
   <status>attached</status>
   <attachTime>2010-05-17T11:22:33.456Z</attachTime>
 </AttachVolumeResponse>
+''',
+	internalServerError = '''
+<Response>
+ <Errors>
+  <Error>
+   <Code>Server.InternalError</Code>
+   <Message>An error has occurred. Please try again later.</Message>
+  </Error>
+ </Errors>
+ <RequestID>5ec8da0a-6e23-4343-b474-ca0bb5c22a51</RequestID>
+</Response>
 '''
 )
 
