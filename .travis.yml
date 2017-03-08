@@ -13,7 +13,7 @@ addons:
 
 install:
   # Install dependences
-  - pip install ansible nose mock requests
+  - pip install ansible nose coveralls mock requests
 
   # Check ansible version
   - ansible --version
@@ -27,3 +27,4 @@ script:
   
   # NIFTY Cloud modules check
   - nosetests --no-byte-compile --with-coverage --cover-package=library/ --where=library/
+  - coveralls
