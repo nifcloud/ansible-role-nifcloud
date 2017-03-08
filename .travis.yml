@@ -28,3 +28,6 @@ script:
   # NIFTY Cloud modules check
   - nosetests --no-byte-compile --with-coverage --cover-package=library/ --where=library/
   - coveralls
+
+notifications:
+  webhooks: https://galaxy.ansible.com/api/v1/notifications/
