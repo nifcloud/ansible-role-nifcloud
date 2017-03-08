@@ -3,6 +3,8 @@ niftycloud
 
 Ansible role for importing module of NIFTYCloud
 
+[![Build Status](https://travis-ci.org/NIFTYCloud/ansible-role-niftycloud.svg?branch=master)](https://travis-ci.org/NIFTYCloud/ansible-role-niftycloud)
+
 Requirements
 ------------
 
