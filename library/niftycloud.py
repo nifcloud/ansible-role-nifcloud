@@ -147,6 +147,24 @@ def get_instance_state(module):
 	else:
 		return -1
 
+def configure_user_data(module, params):
+	startup_script_path = module.params['startup_script']
+	startup_script_vars = module.params['startup_script_vars']
+
+	if not startup_script_path:
+		return
+
+	try:
+		with open(startup_script_path, 'r') as fp:
+			startup_script_template = fp.read()
+			startup_script = startup_script_template.format(**startup_script_vars)
+
+			params['UserData']          = base64.b64encode(startup_script)
+			params['UserData.Encoding'] = 'base64'
+	except IOError:
+		if 'UserData' in params: del params['UserData']
+		if 'UserData.Encoding' in params: del params['UserData.Encoding']
+
 def create_instance(module):
 	goal_state = [16, 96]
 
@@ -188,20 +206,7 @@ def create_instance(module):
                 if network_interface.get('ipAddress') is not None:
                         params['NetworkInterface.'+str(n)+'.IpAddress'] = network_interface.get('ipAddress')
 
-	startup_script_path = module.params['startup_script']
-	startup_script_vars = module.params['startup_script_vars']
-
-	try:
-		with open(startup_script_path, 'r') as fp:
-			startup_script_template = fp.read()
-			startup_script = startup_script_template.format(**startup_script_vars)
-
-			params['UserData']          = base64.b64encode(startup_script)
-			params['UserData.Encoding'] = 'base64'
-
-	except IOError:
-		if 'UserData' in params: del params['UserData']
-		if 'UserData.Encoding' in params: del params['UserData.Encoding']
+	configure_user_data(module, params)
 
 	res = request_to_api(module, 'POST', 'RunInstances', params)
 
@@ -237,21 +242,7 @@ def start_instance(module, current_state):
 		if module.params['accounting_type'] is not None:
 			params['AccountingType.1'] = module.params['accounting_type']
 
-		startup_script_path = module.params['startup_script']
-		startup_script_vars = module.params['startup_script_vars']
-
-		if startup_script_path is not None:
-			try:
-				with open(startup_script_path, 'r') as fp:
-					startup_script_template = fp.read()
-					startup_script = startup_script_template.format(**startup_script_vars)
-
-					params['UserData']          = base64.b64encode(startup_script)
-					params['UserData.Encoding'] = 'base64'
-
-			except IOError:
-				if 'UserData' in params: del params['UserData']
-				if 'UserData.Encoding' in params: del params['UserData.Encoding']
+		configure_user_data(module, params)
 
 		res = request_to_api(module, 'POST', 'StartInstances', params)
 
@@ -326,8 +317,8 @@ def main():
 			ip_type             = dict(required=False, type='str',  default=None),
 			public_ip           = dict(required=False, type='str',  default=None),
 			startup_script      = dict(required=False, type='str',  default=None),
-			startup_script_vars = dict(required=False, type='dict', deafult={}),
-			network_interface   = dict(required=False, type='list', deafult=[]),
+			startup_script_vars = dict(required=False, type='dict', default={}),
+			network_interface   = dict(required=False, type='list', default=[]),
 		)
 	)
 

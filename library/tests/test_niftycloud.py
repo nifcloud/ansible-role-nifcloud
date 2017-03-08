@@ -7,6 +7,7 @@ import unittest
 import mock
 import niftycloud
 import xml.etree.ElementTree as etree
+import copy
 
 class TestNiftycloud(unittest.TestCase):
 	def setUp(self):
@@ -182,6 +183,42 @@ class TestNiftycloud(unittest.TestCase):
 					(True, 16, 'created'),
 					niftycloud.create_instance(self.mockModule)
 				)
+
+        # create success without startup_script
+        def test_create_instance_without_startup_script_success(self):
+		params = copy.deepcopy(self.mockModule.params)
+		params['startup_script'] = None
+		params['startup_script_vars'] = {}
+		
+		mock_module = mock.MagicMock(
+			params=params,
+			fail_json = copy.deepcopy(self.mockModule.fail_json)
+		)
+
+                with mock.patch('requests.post', self.mockRequestsPostRunInstance):
+                        with mock.patch('niftycloud.get_instance_state', self.mockGetInstanceState16):
+                                self.assertEqual(
+                                        (True, 16, 'created'),
+                                        niftycloud.create_instance(mock_module)
+                                )
+
+        # create success without startup_script_vars
+        def test_create_instance_without_startup_script_vars_success(self):
+                params = copy.deepcopy(self.mockModule.params)
+		params['startup_script'] = '{0}/files/startup_script_blank'.format(os.path.dirname(__file__))
+                params['startup_script_vars'] = {}
+
+                mock_module = mock.MagicMock(
+                        params=params,
+                        fail_json = copy.deepcopy(self.mockModule.fail_json)
+                )
+
+                with mock.patch('requests.post', self.mockRequestsPostRunInstance):
+                        with mock.patch('niftycloud.get_instance_state', self.mockGetInstanceState16):
+                                self.assertEqual(
+                                        (True, 16, 'created'),
+                                        niftycloud.create_instance(mock_module)
+                                )
 
 	# change state failed
 	def test_create_instance_failed(self):
