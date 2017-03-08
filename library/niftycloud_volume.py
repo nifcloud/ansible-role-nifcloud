@@ -187,7 +187,7 @@ def main():
 	module = AnsibleModule(
 		argument_spec = dict(
 			access_key          = dict(required=True,  type='str'),
-			secret_access_key   = dict(required=True,  type='str'),
+			secret_access_key   = dict(required=True,  type='str', no_log=True),
 			endpoint            = dict(required=True,  type='str'),
 			size                = dict(required=True,  type='str'),
 			volume_id           = dict(required=False, type='str', default=None),

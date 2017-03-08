@@ -194,7 +194,7 @@ def main():
 	module = AnsibleModule(
 		argument_spec = dict(
 			access_key          = dict(required=True,  type='str'),
-			secret_access_key   = dict(required=True,  type='str'),
+			secret_access_key   = dict(required=True,  type='str', no_log=True),
 			endpoint            = dict(required=True,  type='str'),
 			instance_id         = dict(required=True,  type='str'),
 			instance_port       = dict(required=False, type='int', default=None),
