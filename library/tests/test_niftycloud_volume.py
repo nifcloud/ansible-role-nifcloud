@@ -49,7 +49,7 @@ class TestNiftycloud(unittest.TestCase):
 		self.mockRequestsInternalServerError = mock.MagicMock(
 			return_value=mock.MagicMock(
 				status_code = 500,
-				text = self.xml['describeVolumes']
+				text = self.xml['internalServerError']
 			))
 
 		self.mockRequestsError = mock.MagicMock(return_value=None)
@@ -91,6 +91,21 @@ class TestNiftycloud(unittest.TestCase):
 		self.assertEqual(etree.tostring(info['xml_body']),
 				 etree.tostring(etree.fromstring(self.xml['describeVolumes'])))
 
+	# api error
+	def test_request_to_api_error(self):
+		method = 'GET'
+		action = 'DescribeVolumes'
+		params = dict(
+			InstanceId = self.mockModule.params['instance_id']
+		)
+
+		with mock.patch('requests.get', self.mockRequestsInternalServerError):
+			info = niftycloud_volume.request_to_api(self.mockModule, method, action, params)
+
+		self.assertEqual(info['status'], 500)
+		self.assertEqual(etree.tostring(info['xml_body']),
+				 etree.tostring(etree.fromstring(self.xml['internalServerError'])))
+
 	# method failed
 	def test_request_to_api_unknown(self):
 		method = 'UNKNOWN'
@@ -106,7 +121,7 @@ class TestNiftycloud(unittest.TestCase):
 		)
 
 	# network error
-	def test_request_to_api_error(self):
+	def test_request_to_api_request_error(self):
 		method = 'GET'
 		action = 'DescribeVolumes'
 		params = dict(
@@ -119,6 +134,21 @@ class TestNiftycloud(unittest.TestCase):
 				niftycloud_volume.request_to_api,
 				(self.mockModule, method, action, params)
 			)
+
+	# get api error code & message
+	def test_get_api_error(self):
+		method = 'GET'
+		action = 'DescribeVolumes'
+		params = dict(
+			InstanceId = self.mockModule.params['instance_id']
+		)
+
+		with mock.patch('requests.get', self.mockRequestsInternalServerError):
+			info = niftycloud_volume.request_to_api(self.mockModule, method, action, params)
+
+		error_info = niftycloud_volume.get_api_error(info['xml_body'])
+		self.assertEqual(error_info['code'],    'Server.InternalError')
+		self.assertEqual(error_info['message'], 'An error has occurred. Please try again later.')
 
 	# get volume state present
 	def test_get_volume_state_present(self):
@@ -282,6 +312,17 @@ niftycloud_api_response_sample = dict(
   <status>attached</status>
   <attachTime>2010-05-17T11:22:33.456Z</attachTime>
 </AttachVolumeResponse>
+''',
+	internalServerError = '''
+<Response>
+ <Errors>
+  <Error>
+   <Code>Server.InternalError</Code>
+   <Message>An error has occurred. Please try again later.</Message>
+  </Error>
+ </Errors>
+ <RequestID>5ec8da0a-6e23-4343-b474-ca0bb5c22a51</RequestID>
+</Response>
 '''
 )
 

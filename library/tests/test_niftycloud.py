@@ -63,7 +63,7 @@ class TestNiftycloud(unittest.TestCase):
 		self.mockRequestsInternalServerError = mock.MagicMock(
 			return_value=mock.MagicMock(
 				status_code = 500,
-				text = self.xml['describeInstance']
+				text = self.xml['internalServerError']
 			))
 
 		self.mockGetInstanceStateError = mock.MagicMock(return_value=-1)
@@ -132,6 +132,23 @@ class TestNiftycloud(unittest.TestCase):
 		self.assertEqual(etree.tostring(info['xml_body']),
 				 etree.tostring(etree.fromstring(self.xml['runInstance'])))
 
+	# api error
+	def test_request_to_api_error(self):
+		method = 'GET'
+		action = 'DescribeInstances'
+		params = dict(
+			ImageId = self.mockModule.params['image_id'],
+			KeyName = self.mockModule.params['key_name'],
+			InstanceId = self.mockModule.params['instance_id']
+		)
+
+		with mock.patch('requests.get', self.mockRequestsInternalServerError):
+			info = niftycloud.request_to_api(self.mockModule, method, action, params)
+
+		self.assertEqual(info['status'], 500)
+		self.assertEqual(etree.tostring(info['xml_body']),
+				 etree.tostring(etree.fromstring(self.xml['internalServerError'])))
+
 	# method failed
 	def test_request_to_api_unknown(self):
 		method = 'UNKNOWN'
@@ -149,7 +166,7 @@ class TestNiftycloud(unittest.TestCase):
 		)
 
 	# network error
-	def test_request_to_api_error(self):
+	def test_request_to_api_request_error(self):
 		method = 'GET'
 		action = 'DescribeInstances'
 		params = dict(
@@ -164,6 +181,23 @@ class TestNiftycloud(unittest.TestCase):
 				niftycloud.request_to_api,
 				(self.mockModule, method, action, params)
 			)
+
+	# get api error code & message
+	def test_get_api_error(self):
+		method = 'GET'
+		action = 'DescribeInstances'
+		params = dict(
+			ImageId = self.mockModule.params['image_id'],
+			KeyName = self.mockModule.params['key_name'],
+			InstanceId = self.mockModule.params['instance_id']
+		)
+
+		with mock.patch('requests.get', self.mockRequestsInternalServerError):
+			info = niftycloud.request_to_api(self.mockModule, method, action, params)
+
+		error_info = niftycloud.get_api_error(info['xml_body'])
+		self.assertEqual(error_info['code'],    'Server.InternalError')
+		self.assertEqual(error_info['message'], 'An error has occurred. Please try again later.')
 
 	# running
 	def test_get_instance_state_present(self):
@@ -610,6 +644,17 @@ niftycloud_api_response_sample = dict(
     </item>
   </instancesSet>
 </StopInstancesResponse>
+''',
+	internalServerError = '''
+<Response>
+ <Errors>
+  <Error>
+   <Code>Server.InternalError</Code>
+   <Message>An error has occurred. Please try again later.</Message>
+  </Error>
+ </Errors>
+ <RequestID>5ec8da0a-6e23-4343-b474-ca0bb5c22a51</RequestID>
+</Response>
 '''
 )
 

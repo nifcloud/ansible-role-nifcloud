@@ -99,6 +99,13 @@ def request_to_api(module, method, action, params):
 	else:
 		module.fail_json(status=-1, msg='changes failed (http request failed)')
 
+def get_api_error(xml_body):
+	info = dict(
+		code    = xml_body.find('.//Errors/Error/Code').text,
+		message = xml_body.find('.//Errors/Error/Message').text
+	)
+	return info
+
 def get_volume_state(module):
 	params = dict()
 
@@ -149,7 +156,14 @@ def create_volume(module):
 		else:
 			module.fail_json(status=-1, instance_id=module.params['instance_id'], msg='changes failed (create_volume)')
 	else:
-		module.fail_json(status=-1, instance_id=module.params['instance_id'], msg='changes failed (create_volume)')
+		error_info = get_api_error(res['xml_body'])
+		module.fail_json(
+			status=-1,
+			instance_id=module.params['instance_id'],
+			msg='changes failed (create_volume)',
+			error_code=error_info.get('code'),
+			error_message=error_info.get('message')
+		)
 
 def attach_volume(module):
 	(current_state, instance_id) = get_volume_state(module)
@@ -174,7 +188,14 @@ def attach_volume(module):
 			else:
 				module.fail_json(status=-1, instance_id=module.params['instance_id'], msg='changes failed (attach_volume)')
 		else:
-			module.fail_json(status=-1, instance_id=module.params['instance_id'], msg='changes failed (attach_volume)')
+			error_info = get_api_error(res['xml_body'])
+			module.fail_json(
+				status=-1,
+				instance_id=module.params['instance_id'],
+				msg='changes failed (attach_volume)',
+				error_code=error_info.get('code'),
+				error_message=error_info.get('message')
+			)
 	elif current_state == 'attached' and instance_id == module.params['instance_id']:
 		return (False, current_state)
 	else:
