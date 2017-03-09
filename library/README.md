@@ -1,8 +1,9 @@
 # Ansible modules for NIFTY Cloud
 
 * [niftycloud](documents/niftycloud.md)
-* [niftycloud_volume](documents/niftycloud_volume.md)
+* [niftycloud_fw](documents/niftycloud_fw.md)
 * [niftycloud_lb](documents/niftycloud_lb.md)
+* [niftycloud_volume](documents/niftycloud_volume.md)
 
 ## Test
 
