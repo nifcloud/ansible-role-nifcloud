@@ -373,6 +373,57 @@ class TestNiftycloud(unittest.TestCase):
 		))
 		self.assertIsNone(info)
 
+	# create present  * do nothing
+	def test_create_security_group_skip(self):
+		(result, info) = niftycloud_fw.create_security_group(
+			self.mockModule,
+			self.result['present'],
+			self.security_group_info
+		)
+
+		self.assertEqual(result, self.result['present'])
+		self.assertEqual(info,   self.security_group_info)
+
+	# create success
+	def test_create_security_group_success(self):
+		with mock.patch('requests.post', self.mockRequestsPostCreateSecurityGroup):
+			with mock.patch('niftycloud_fw.describe_security_group', self.mockDescribeSecurityGroup):
+				(result, info) = niftycloud_fw.create_security_group(
+					self.mockModule,
+					self.result['absent'],
+					None
+				)
+
+		self.assertEqual(result, dict(
+			created            = True,
+			changed_attributes = dict(),
+			state              = 'present',
+		))
+		self.assertEqual(info, self.security_group_info)
+
+	# create failed
+	def test_create_security_group_failed(self):
+		with mock.patch('requests.post', self.mockRequestsPostCreateSecurityGroup):
+			with mock.patch('niftycloud_fw.describe_security_group', self.mockNotFoundSecurityGroup):
+				with self.assertRaises(Exception) as cm:
+					niftycloud_fw.create_security_group(
+						self.mockModule,
+						self.result['absent'],
+						None
+					)
+		self.assertEqual(cm.exception.message, 'failed')
+
+	# create request failed
+	def test_create_security_group_request_failed(self):
+		with mock.patch('requests.post', self.mockRequestsInternalServerError):
+			with self.assertRaises(Exception) as cm:
+				niftycloud_fw.create_security_group(
+					self.mockModule,
+					self.result['absent'],
+					None
+				)
+		self.assertEqual(cm.exception.message, 'failed')
+
 	# run success (absent - create -> present - other action -> present)
 	def test_run_success_absent(self):
 		with mock.patch('niftycloud_fw.describe_security_group', self.mockNotFoundSecurityGroup):

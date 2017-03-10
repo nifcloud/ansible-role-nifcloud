@@ -214,7 +214,44 @@ def create_security_group(module, result, security_group_info):
 	if security_group_info is not None:
 		return (result, security_group_info)
 
-	# TODO
+	current_method_name = sys._getframe().f_code.co_name
+	goal_state          = 'present'
+	group_name          = module.params['group_name']
+
+	params = dict(
+		GroupName        = group_name,
+		GroupDescription = module.params.get('description', ''),
+	)
+
+	if module.params.get('availability_zone') is not None:
+		params["Placement.AvailabilityZone"] = module.params['availability_zone']
+
+	res = request_to_api(module, 'POST', 'CreateSecurityGroup', params)
+
+	if res['status'] == 200:
+		for retry_count in range(10):
+			(result, security_group_info) = describe_security_group(module, result)
+			current_state = result.get('state')
+			if current_state == goal_state:
+				break
+			else:
+				time.sleep(10)
+
+		if current_state == goal_state:
+			result['created'] = True
+		else:
+			fail(module, result, 'changes failed',
+				current_method = current_method_name,
+				group_name     = group_name
+			)
+	else:
+		error_info = get_api_error(res['xml_body'])
+		fail(module, result, 'changes failed',
+			current_method = current_method_name,
+			group_name     = group_name,
+			**error_info
+		)
+
 	return (result, security_group_info)
 
 def update_security_group(module, result, security_group_info):
