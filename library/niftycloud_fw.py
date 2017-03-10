@@ -132,7 +132,80 @@ def describe_security_group(module, result):
 	result              = copy.deepcopy(result)
 	security_group_info = None
 
-	# TODO
+	params = dict()
+	params['GroupName.1'] = module.params['group_name']
+
+	res = request_to_api(module, 'GET', 'DescribeSecurityGroups', params)
+
+	# get xml element by python 2.6 and 2.7 or more
+	# don't use xml.etree.ElementTree.Element.fint(match, namespaces)
+	# this is not inplemented by python 2.6
+	status = res['xml_body'].find('.//{{{nc}}}groupStatus'.format(**res['xml_namespace']))
+
+	if res['status'] != 200 or status is None:
+		result['state'] = 'absent'
+	elif status.text != 'applied':
+		result['state'] = 'processing'
+	else:
+		result['state'] = 'present'
+
+		# get xml element by python 2.6 and 2.7 or more
+		# don't use xml.etree.ElementTree.Element.fint(match, namespaces)
+		# this is not inplemented by python 2.6
+		group_name     = res['xml_body'].find('.//{{{nc}}}groupName'.format(**res['xml_namespace']))
+		description    = res['xml_body'].find('.//{{{nc}}}groupDescription'.format(**res['xml_namespace']))
+		log_limit      = res['xml_body'].find('.//{{{nc}}}groupLogLimit'.format(**res['xml_namespace']))
+		net_bios       = res['xml_body'].find('.//{{{nc}}}groupLogFilterNetBios'.format(**res['xml_namespace']))
+		broadcast      = res['xml_body'].find('.//{{{nc}}}groupLogFilterBroadcast'.format(**res['xml_namespace']))
+		ip_permissions = res['xml_body'].findall('.//{{{nc}}}ipPermissions/{{{nc}}}item'.format(**res['xml_namespace']))
+
+		# set description
+		if description is None:
+			description = ''
+		elif isinstance(description.text, unicode):
+			description = description.text.encode('utf-8')
+		else:
+			description = description.text
+
+		# set net_bios
+		log_filter_net_bios = (net_bios.text.lower() != 'false') if net_bios is not None else None
+
+		# set broadcast
+		log_filter_broadcast = (broadcast.text.lower() != 'false') if broadcast is not None else None
+
+		# set ip_permissions
+		ip_permission_list = []
+		for ip_permission in (ip_permissions or []):
+			# get xml element by python 2.6 and 2.7 or more
+			# don't use xml.etree.ElementTree.Element.fint(match, namespaces)
+			# this is not inplemented by python 2.6
+			_ip_protocol = ip_permission.find('.//{{{nc}}}ipProtocol'.format(**res['xml_namespace']))
+			_in_out      = ip_permission.find('.//{{{nc}}}inOut'.format(**res['xml_namespace']))
+			_from_port   = ip_permission.find('.//{{{nc}}}fromPort'.format(**res['xml_namespace']))
+			_to_port     = ip_permission.find('.//{{{nc}}}toPort'.format(**res['xml_namespace']))
+			_cidr_ip     = ip_permission.find('.//{{{nc}}}cidrIp'.format(**res['xml_namespace']))
+			_group_name  = ip_permission.find('.//{{{nc}}}groupName'.format(**res['xml_namespace']))
+
+			ip_permission_list.append(dict(
+				ip_protocol = _ip_protocol.text,
+				in_out      = _in_out.text,
+				from_port   = int(_from_port.text) if _from_port  is not None else None,
+				to_port     = int(_to_port.text)   if _to_port    is not None else None,
+				cidr_ip     = _cidr_ip.text        if _cidr_ip    is not None else None,
+				group_name  = _group_name.text     if _group_name is not None else None,
+			))
+
+		security_group_info = dict(
+			group_name     = group_name.text     if group_name is not None else None,
+			log_limit      = int(log_limit.text) if log_limit  is not None else None,
+			description    = description,
+			log_filters    = dict(
+				net_bios  = log_filter_net_bios,
+				broadcast = log_filter_broadcast,
+			),
+			ip_permissions = ip_permission_list,
+		)
+
 	return (result, security_group_info)
 
 def create_security_group(module, result, security_group_info):

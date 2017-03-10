@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 import os
 import sys
 sys.path.append('.')
@@ -94,10 +96,28 @@ class TestNiftycloud(unittest.TestCase):
 				text = self.xml['describeSecurityGroups']
 			))
 
+		self.mockRequestsGetDescribeSecurityGroupsDescriptionUnicode = mock.MagicMock(
+			return_value=mock.MagicMock(
+				status_code = 200,
+				text = self.xml['describeSecurityGroupsDescriptionUnicode']
+			))
+
+		self.mockRequestsGetDescribeSecurityGroupsDescriptionNone = mock.MagicMock(
+			return_value=mock.MagicMock(
+				status_code = 200,
+				text = self.xml['describeSecurityGroupsDescriptionNone']
+			))
+
 		self.mockRequestsGetDescribeSecurityGroupsProcessing = mock.MagicMock(
 			return_value=mock.MagicMock(
 				status_code = 200,
 				text = self.xml['describeSecurityGroupsProcessing']
+			))
+
+		self.mockRequestsGetDescribeSecurityGroupsNotFound = mock.MagicMock(
+			return_value=mock.MagicMock(
+				status_code = 200,
+				text = self.xml['describeSecurityGroupsNotFound']
 			))
 
 		self.mockRequestsPostCreateSecurityGroup = mock.MagicMock(
@@ -251,6 +271,108 @@ class TestNiftycloud(unittest.TestCase):
 			)
 		self.assertEqual(cm.exception.message, 'failed')
 
+	# describe present
+	def test_describe_security_group_present(self):
+		with mock.patch('requests.get', self.mockRequestsGetDescribeSecurityGroups):
+			(result, info) = niftycloud_fw.describe_security_group(self.mockModule, self.result['absent'])
+
+		self.assertEqual(result, dict(
+			created            = False,
+			changed_attributes = dict(),
+			state              = 'present',
+		))
+		self.assertIsInstance(info, dict)
+		self.assertEqual(info['group_name'],  'fw001')
+		self.assertIsInstance(info['description'], str)
+		self.assertEqual(info['description'], 'sample fw')
+		self.assertEqual(info['log_limit'],   100000)
+		self.assertEqual(info['log_filters'], dict(
+			net_bios  = True,
+			broadcast = True,
+		))
+		self.assertEqual(info['ip_permissions'], [
+			dict(
+				ip_protocol = 'TCP',
+				in_out      = 'IN',
+				from_port   = 10000,
+				to_port     = 10010,
+				cidr_ip     = None,
+				group_name  = 'fw002',
+			),
+			dict(
+				ip_protocol = 'ANY',
+				in_out      = 'OUT',
+				from_port   = None,
+				to_port     = None,
+				cidr_ip     = '0.0.0.0/0',
+				group_name  = None,
+			),
+		])
+
+	# describe present description unicode
+	def test_describe_security_group_description_unicode(self):
+		with mock.patch('requests.get', self.mockRequestsGetDescribeSecurityGroupsDescriptionUnicode):
+			(result, info) = niftycloud_fw.describe_security_group(self.mockModule, self.result['absent'])
+
+		self.assertEqual(result, dict(
+			created            = False,
+			changed_attributes = dict(),
+			state              = 'present',
+		))
+		self.assertIsInstance(info, dict)
+		self.assertIsInstance(info['description'], str)
+		self.assertEqual(info['description'], 'サンプルFW')
+
+	# describe present description none
+	def test_describe_security_group_description_none(self):
+		with mock.patch('requests.get', self.mockRequestsGetDescribeSecurityGroupsDescriptionNone):
+			(result, info) = niftycloud_fw.describe_security_group(self.mockModule, self.result['absent'])
+
+		self.assertEqual(result, dict(
+			created            = False,
+			changed_attributes = dict(),
+			state              = 'present',
+		))
+		self.assertIsInstance(info, dict)
+		self.assertIsInstance(info['description'], str)
+		self.assertEqual(info['description'], '')
+
+	# describe processing
+	def test_describe_security_group_processing(self):
+		with mock.patch('requests.get', self.mockRequestsGetDescribeSecurityGroupsProcessing):
+			(result, info) = niftycloud_fw.describe_security_group(self.mockModule, self.result['absent'])
+
+		self.assertEqual(result, dict(
+			created            = False,
+			changed_attributes = dict(),
+			state              = 'processing',
+		))
+		self.assertIsNone(info)
+
+	# describe absent
+	def test_describe_security_group_absent(self):
+		with mock.patch('requests.get', self.mockRequestsGetDescribeSecurityGroupsNotFound):
+			(result, info) = niftycloud_fw.describe_security_group(self.mockModule, self.result['absent'])
+
+		self.assertEqual(result, dict(
+			created            = False,
+			changed_attributes = dict(),
+			state              = 'absent',
+		))
+		self.assertIsNone(info)
+
+	# describe failed
+	def test_describe_security_group_failed(self):
+		with mock.patch('requests.get', self.mockRequestsInternalServerError):
+			(result, info) = niftycloud_fw.describe_security_group(self.mockModule, self.result['absent'])
+
+		self.assertEqual(result, dict(
+			created            = False,
+			changed_attributes = dict(),
+			state              = 'absent',
+		))
+		self.assertIsNone(info)
+
 	# run success (absent - create -> present - other action -> present)
 	def test_run_success_absent(self):
 		with mock.patch('niftycloud_fw.describe_security_group', self.mockNotFoundSecurityGroup):
@@ -341,6 +463,47 @@ niftycloud_api_response_sample = dict(
  </securityGroupInfo>
 </DescribeSecurityGroupsResponse>
 ''',
+	describeSecurityGroupsDescriptionUnicode = u'''
+<DescribeSecurityGroupsResponse xmlns="https://cp.cloud.nifty.com/api/">
+ <RequestID>5ec8da0a-6e23-4343-b474-ca0bb5c22a51</RequestID>
+ <securityGroupInfo>
+  <item>
+   <ownerId></ownerId>
+   <groupName>fw002</groupName>
+   <groupDescription>サンプルFW</groupDescription>
+   <groupStatus>applied</groupStatus>
+   <ipPermissions />
+   <instancesSet />
+   <instanceUniqueIdsSet />
+   <groupRuleLimit>100</groupRuleLimit>
+   <groupLogLimit>1000</groupLogLimit>
+   <groupLogFilterNetBios>false</groupLogFilterNetBios>
+   <groupLogFilterBroadcast>false</groupLogFilterBroadcast>
+   <availabilityZone>west-12</availabilityZone>
+  </item>
+ </securityGroupInfo>
+</DescribeSecurityGroupsResponse>
+''',
+	describeSecurityGroupsDescriptionNone = '''
+<DescribeSecurityGroupsResponse xmlns="https://cp.cloud.nifty.com/api/">
+ <RequestID>5ec8da0a-6e23-4343-b474-ca0bb5c22a51</RequestID>
+ <securityGroupInfo>
+  <item>
+   <ownerId></ownerId>
+   <groupName>fw002</groupName>
+   <groupStatus>applied</groupStatus>
+   <ipPermissions />
+   <instancesSet />
+   <instanceUniqueIdsSet />
+   <groupRuleLimit>100</groupRuleLimit>
+   <groupLogLimit>1000</groupLogLimit>
+   <groupLogFilterNetBios>false</groupLogFilterNetBios>
+   <groupLogFilterBroadcast>false</groupLogFilterBroadcast>
+   <availabilityZone>west-12</availabilityZone>
+  </item>
+ </securityGroupInfo>
+</DescribeSecurityGroupsResponse>
+''',
 	describeSecurityGroupsProcessing = '''
 <DescribeSecurityGroupsResponse xmlns="https://cp.cloud.nifty.com/api/">
  <RequestID>5ec8da0a-6e23-4343-b474-ca0bb5c22a51</RequestID>
@@ -360,6 +523,12 @@ niftycloud_api_response_sample = dict(
    <availabilityZone>west-12</availabilityZone>
   </item>
  </securityGroupInfo>
+</DescribeSecurityGroupsResponse>
+''',
+	describeSecurityGroupsNotFound = '''
+<DescribeSecurityGroupsResponse xmlns="https://cp.cloud.nifty.com/api/">
+ <RequestID>5ec8da0a-6e23-4343-b474-ca0bb5c22a51</RequestID>
+ <securityGroupInfo />
 </DescribeSecurityGroupsResponse>
 ''',
 	createSecurityGroup = '''
