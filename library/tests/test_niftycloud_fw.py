@@ -9,6 +9,7 @@ import unittest
 import mock
 import niftycloud_fw
 import xml.etree.ElementTree as etree
+import copy
 
 class TestNiftycloud(unittest.TestCase):
 	def setUp(self):
@@ -126,6 +127,12 @@ class TestNiftycloud(unittest.TestCase):
 				text = self.xml['createSecurityGroup']
 			))
 
+		self.mockRequestsPostUpdateSecurityGroup = mock.MagicMock(
+			return_value=mock.MagicMock(
+				status_code = 200,
+				text = self.xml['updateSecurityGroup']
+			))
+
 		self.mockRequestsInternalServerError = mock.MagicMock(
 			return_value=mock.MagicMock(
 				status_code = 500,
@@ -156,7 +163,7 @@ class TestNiftycloud(unittest.TestCase):
 		patcher = mock.patch('time.sleep')
 		self.addCleanup(patcher.stop)
 		self.mock_time_sleep = patcher.start()
-			
+
 	# calculate signature
 	def test_calculate_signature(self):
 		secret_access_key = self.mockModule.params['secret_access_key']
@@ -424,6 +431,479 @@ class TestNiftycloud(unittest.TestCase):
 				)
 		self.assertEqual(cm.exception.message, 'failed')
 
+	# update api success
+	def test_update_security_group_attribute_success(self):
+		params = dict(
+			GroupName              = self.mockModule.params['group_name'],
+			GroupDescriptionUpdate = self.mockModule.params['description'],
+		)
+
+		with mock.patch('requests.post', self.mockRequestsPostUpdateSecurityGroup):
+			with mock.patch('niftycloud_fw.describe_security_group', self.mockDescribeSecurityGroup):
+				(result, info) = niftycloud_fw.update_security_group_attribute(
+					self.mockModule,
+					self.result['present'],
+					self.security_group_info,
+					params
+				)
+
+		self.assertEqual(result, self.result['present'])
+		self.assertEqual(info, self.security_group_info)
+
+	# update api absent  * do nothing
+	def test_update_security_group_attribute_absent(self):
+		params = dict(
+			GroupName              = self.mockModule.params['group_name'],
+			GroupDescriptionUpdate = self.mockModule.params['description'],
+		)
+
+		(result, info) = niftycloud_fw.update_security_group_attribute(
+			self.mockModule,
+			self.result['absent'],
+			None,
+			params
+		)
+
+		self.assertEqual(result, self.result['absent'])
+		self.assertIsNone(info)
+
+	# update api failed
+	def test_update_security_group_attribute_failed(self):
+		params = dict(
+			GroupName              = self.mockModule.params['group_name'],
+			GroupDescriptionUpdate = self.mockModule.params['description'],
+		)
+
+		with mock.patch('requests.post', self.mockRequestsPostUpdateSecurityGroup):
+			with mock.patch('niftycloud_fw.describe_security_group', self.mockNotFoundSecurityGroup):
+				with self.assertRaises(Exception) as cm:
+					(result, info) = niftycloud_fw.update_security_group_attribute(
+						self.mockModule,
+						self.result['present'],
+						self.security_group_info,
+						params
+					)
+		self.assertEqual(cm.exception.message, 'failed')
+
+	# update api request failed
+	def test_update_security_group_attribute_request_failed(self):
+		params = dict(
+			GroupName              = self.mockModule.params['group_name'],
+			GroupDescriptionUpdate = self.mockModule.params['description'],
+		)
+
+		with mock.patch('requests.post', self.mockRequestsInternalServerError):
+			with self.assertRaises(Exception) as cm:
+				(result, info) = niftycloud_fw.update_security_group_attribute(
+					self.mockModule,
+					self.result['present'],
+					self.security_group_info,
+					params
+				)
+		self.assertEqual(cm.exception.message, 'failed')
+
+	# update description success
+	def test_update_security_group_description_success(self):
+		changed_security_group_info = dict(
+			copy.deepcopy(self.security_group_info),
+			description = self.mockModule.params['description'],
+		)
+		mock_describe_security_group = mock.MagicMock(
+			return_value=(
+				self.result['present'],
+				changed_security_group_info,
+			))
+
+		with mock.patch('niftycloud_fw.update_security_group_attribute', mock_describe_security_group):
+			(result, info) = niftycloud_fw.update_security_group_description(
+				self.mockModule,
+				self.result['present'],
+				self.security_group_info
+			)
+
+		self.assertEqual(result, dict(
+			created = False,
+			changed_attributes = dict(
+				description = self.mockModule.params['description'],
+			),
+			state = 'present',
+		))
+		self.assertEqual(info, changed_security_group_info)
+
+	# update description absent  * do nothing
+	def test_update_security_group_description_absent(self):
+		(result, info) = niftycloud_fw.update_security_group_description(
+			self.mockModule,
+			self.result['absent'],
+			None
+		)
+
+		self.assertEqual(result, self.result['absent'])
+		self.assertIsNone(info)
+
+	# update description is None  * do nothing
+	def test_update_security_group_description_none(self):
+		security_group_info = dict(
+			copy.deepcopy(self.security_group_info),
+			description = self.mockModule.params['description'],
+		)
+                mock_module = mock.MagicMock(
+                        params = dict(
+				copy.deepcopy(self.mockModule.params),
+				description = None,
+			)
+                )
+
+		(result, info) = niftycloud_fw.update_security_group_description(
+			mock_module,
+			self.result['present'],
+			security_group_info
+		)
+
+		self.assertEqual(result, self.result['present'])
+		self.assertEqual(info, security_group_info)
+
+	# update description is no change  * do nothing
+	def test_update_security_group_description_skip(self):
+		changed_security_group_info = dict(
+			copy.deepcopy(self.security_group_info),
+			description = self.mockModule.params['description'],
+		)
+
+		(result, info) = niftycloud_fw.update_security_group_description(
+			self.mockModule,
+			self.result['present'],
+			changed_security_group_info
+		)
+
+		self.assertEqual(result, self.result['present'])
+		self.assertEqual(info, changed_security_group_info)
+
+	# update description failed
+	def test_update_security_group_description_failed(self):
+		with mock.patch('niftycloud_fw.update_security_group_attribute', self.mockDescribeSecurityGroup):
+			with self.assertRaises(Exception) as cm:
+				(result, info) = niftycloud_fw.update_security_group_description(
+					self.mockModule,
+					self.result['present'],
+					self.security_group_info
+				)
+		self.assertEqual(cm.exception.message, 'failed')
+
+	# update log_limit success
+	def test_update_security_group_log_limit_success(self):
+		changed_security_group_info = dict(
+			copy.deepcopy(self.security_group_info),
+			log_limit = self.mockModule.params['log_limit'],
+		)
+		mock_describe_security_group = mock.MagicMock(
+			return_value=(
+				self.result['present'],
+				changed_security_group_info,
+			))
+
+		with mock.patch('niftycloud_fw.update_security_group_attribute', mock_describe_security_group):
+			(result, info) = niftycloud_fw.update_security_group_log_limit(
+				self.mockModule,
+				self.result['present'],
+				self.security_group_info
+			)
+
+		self.assertEqual(result, dict(
+			created = False,
+			changed_attributes = dict(
+				log_limit = self.mockModule.params['log_limit'],
+			),
+			state = 'present',
+		))
+		self.assertEqual(info, changed_security_group_info)
+
+	# update log_limit absent  * do nothing
+	def test_update_security_group_log_limit_absent(self):
+		(result, info) = niftycloud_fw.update_security_group_log_limit(
+			self.mockModule,
+			self.result['absent'],
+			None
+		)
+
+		self.assertEqual(result, self.result['absent'])
+		self.assertIsNone(info)
+
+	# update log_limit is None  * do nothing
+	def test_update_security_group_log_limit_none(self):
+		security_group_info = dict(
+			copy.deepcopy(self.security_group_info),
+			log_limit = self.mockModule.params['description'],
+		)
+                mock_module = mock.MagicMock(
+                        params = dict(
+				copy.deepcopy(self.mockModule.params),
+				log_limit = None,
+			)
+                )
+
+		(result, info) = niftycloud_fw.update_security_group_log_limit(
+			mock_module,
+			self.result['present'],
+			security_group_info
+		)
+
+		self.assertEqual(result, self.result['present'])
+		self.assertEqual(info, security_group_info)
+
+	# update log_limit is no change  * do nothing
+	def test_update_security_group_log_limit_skip(self):
+		changed_security_group_info = dict(
+			copy.deepcopy(self.security_group_info),
+			log_limit = self.mockModule.params['log_limit'],
+		)
+
+		(result, info) = niftycloud_fw.update_security_group_log_limit(
+			self.mockModule,
+			self.result['present'],
+			changed_security_group_info
+		)
+
+		self.assertEqual(result, self.result['present'])
+		self.assertEqual(info, changed_security_group_info)
+
+	# update log_limit failed
+	def test_update_security_group_log_limit_failed(self):
+		with mock.patch('niftycloud_fw.update_security_group_attribute', self.mockDescribeSecurityGroup):
+			with self.assertRaises(Exception) as cm:
+				(result, info) = niftycloud_fw.update_security_group_log_limit(
+					self.mockModule,
+					self.result['present'],
+					self.security_group_info
+				)
+		self.assertEqual(cm.exception.message, 'failed')
+
+	# update log_filter net_bios success
+	def test_update_security_group_log_filter_net_bios_success(self):
+		changed_security_group_info = dict(
+			copy.deepcopy(self.security_group_info),
+			log_filters = dict(
+				copy.deepcopy(self.security_group_info['log_filters']),
+				net_bios = self.mockModule.params['log_filters']['net_bios'],
+			),
+		)
+		mock_describe_security_group = mock.MagicMock(
+			return_value=(
+				self.result['present'],
+				changed_security_group_info,
+			))
+
+		with mock.patch('niftycloud_fw.update_security_group_attribute', mock_describe_security_group):
+			(result, info) = niftycloud_fw.update_security_group_log_filter_net_bios(
+				self.mockModule,
+				self.result['present'],
+				self.security_group_info
+			)
+
+		self.assertEqual(result, dict(
+			created = False,
+			changed_attributes = dict(
+				log_filter_net_bios = self.mockModule.params['log_filters']['net_bios'],
+			),
+			state = 'present',
+		))
+		self.assertEqual(info, changed_security_group_info)
+
+	# update log_filter net_bios absent
+	def test_update_security_group_log_filter_net_bios_absent(self):
+		(result, info) = niftycloud_fw.update_security_group_log_filter_net_bios(
+			self.mockModule,
+			self.result['absent'],
+			None
+		)
+
+		self.assertEqual(result, self.result['absent'])
+		self.assertIsNone(info)
+
+	# update log_filter net_bios is None  * do nothing
+	def test_update_security_group_log_filter_net_bios_none(self):
+		security_group_info = dict(
+			copy.deepcopy(self.security_group_info),
+			log_filters = dict(
+				copy.deepcopy(self.security_group_info['log_filters']),
+				net_bios = self.mockModule.params['log_filters']['net_bios'],
+			),
+		)
+                mock_module = mock.MagicMock(
+                        params = dict(
+				copy.deepcopy(self.mockModule.params),
+				log_filters = dict(
+					copy.deepcopy(self.mockModule.params['log_filters']),
+					net_bios = None,
+				),
+			)
+                )
+
+		(result, info) = niftycloud_fw.update_security_group_log_filter_net_bios(
+			mock_module,
+			self.result['present'],
+			security_group_info
+		)
+
+		self.assertEqual(result, self.result['present'])
+		self.assertEqual(info, security_group_info)
+
+	# update log_filter net_bios is no change  * do nothing
+	def test_update_security_group_log_filter_net_bios_skip(self):
+		changed_security_group_info = dict(
+			copy.deepcopy(self.security_group_info),
+			log_filters = dict(
+				copy.deepcopy(self.security_group_info['log_filters']),
+				net_bios = self.mockModule.params['log_filters']['net_bios'],
+			),
+		)
+
+		(result, info) = niftycloud_fw.update_security_group_log_filter_net_bios(
+			self.mockModule,
+			self.result['present'],
+			changed_security_group_info
+		)
+
+		self.assertEqual(result, self.result['present'])
+		self.assertEqual(info, changed_security_group_info)
+
+	# update log_filter net_bios failed
+	def test_update_security_group_log_filter_net_bios_failed(self):
+		with mock.patch('niftycloud_fw.update_security_group_attribute', self.mockDescribeSecurityGroup):
+			with self.assertRaises(Exception) as cm:
+				(result, info) = niftycloud_fw.update_security_group_log_filter_net_bios(
+					self.mockModule,
+					self.result['present'],
+					self.security_group_info
+				)
+		self.assertEqual(cm.exception.message, 'failed')
+
+	# update log_filter broadcast success
+	def test_update_security_group_log_filter_broadcast_success(self):
+		changed_security_group_info = dict(
+			copy.deepcopy(self.security_group_info),
+			log_filters = dict(
+				copy.deepcopy(self.security_group_info['log_filters']),
+				broadcast = self.mockModule.params['log_filters']['broadcast'],
+			),
+		)
+		mock_describe_security_group = mock.MagicMock(
+			return_value=(
+				self.result['present'],
+				changed_security_group_info,
+			))
+
+		with mock.patch('niftycloud_fw.update_security_group_attribute', mock_describe_security_group):
+			(result, info) = niftycloud_fw.update_security_group_log_filter_broadcast(
+				self.mockModule,
+				self.result['present'],
+				self.security_group_info
+			)
+
+		self.assertEqual(result, dict(
+			created = False,
+			changed_attributes = dict(
+				log_filter_broadcast = self.mockModule.params['log_filters']['broadcast'],
+			),
+			state = 'present',
+		))
+		self.assertEqual(info, changed_security_group_info)
+
+	# update log_filter broadcast absent
+	def test_update_security_group_log_filter_broadcast_absent(self):
+		(result, info) = niftycloud_fw.update_security_group_log_filter_broadcast(
+			self.mockModule,
+			self.result['absent'],
+			None
+		)
+
+		self.assertEqual(result, self.result['absent'])
+		self.assertIsNone(info)
+
+	# update log_filter broadcast is None  * do nothing
+	def test_update_security_group_log_filter_broadcast_none(self):
+		security_group_info = dict(
+			copy.deepcopy(self.security_group_info),
+			log_filters = dict(
+				copy.deepcopy(self.security_group_info['log_filters']),
+				broadcast = self.mockModule.params['log_filters']['broadcast'],
+			),
+		)
+                mock_module = mock.MagicMock(
+                        params = dict(
+				copy.deepcopy(self.mockModule.params),
+				log_filters = dict(
+					copy.deepcopy(self.mockModule.params['log_filters']),
+					broadcast = None,
+				),
+			)
+                )
+
+		(result, info) = niftycloud_fw.update_security_group_log_filter_broadcast(
+			mock_module,
+			self.result['present'],
+			security_group_info
+		)
+
+		self.assertEqual(result, self.result['present'])
+		self.assertEqual(info, security_group_info)
+
+	# update log_filter broadcast is no change  * do nothing
+	def test_update_security_group_log_filter_broadcast_skip(self):
+		changed_security_group_info = dict(
+			copy.deepcopy(self.security_group_info),
+			log_filters = dict(
+				copy.deepcopy(self.security_group_info['log_filters']),
+				broadcast = self.mockModule.params['log_filters']['broadcast'],
+			),
+		)
+
+		(result, info) = niftycloud_fw.update_security_group_log_filter_broadcast(
+			self.mockModule,
+			self.result['present'],
+			changed_security_group_info
+		)
+
+		self.assertEqual(result, self.result['present'])
+		self.assertEqual(info, changed_security_group_info)
+
+	# update log_filter broadcast failed
+	def test_update_security_group_log_filter_broadcast_failed(self):
+		with mock.patch('niftycloud_fw.update_security_group_attribute', self.mockDescribeSecurityGroup):
+			with self.assertRaises(Exception) as cm:
+				(result, info) = niftycloud_fw.update_security_group_log_filter_broadcast(
+					self.mockModule,
+					self.result['present'],
+					self.security_group_info
+				)
+		self.assertEqual(cm.exception.message, 'failed')
+
+	# update
+	def test_update_security_group(self):
+		with mock.patch('niftycloud_fw.update_security_group_description', self.mockDescribeSecurityGroup):
+			with mock.patch('niftycloud_fw.update_security_group_log_limit', self.mockDescribeSecurityGroup):
+				with mock.patch('niftycloud_fw.update_security_group_log_filter_net_bios', self.mockDescribeSecurityGroup):
+					with mock.patch('niftycloud_fw.update_security_group_log_filter_broadcast', self.mockDescribeSecurityGroup):
+						(result, info) = niftycloud_fw.update_security_group(
+							self.mockModule,
+							self.result['present'],
+							self.security_group_info
+						)
+
+		self.assertEqual(result, self.result['present'])
+		self.assertEqual(info, self.security_group_info)
+
+	# update absent  * do nothing
+	def test_update_security_group_absent(self):
+		(result, info) = niftycloud_fw.update_security_group(
+			self.mockModule,
+			self.result['absent'],
+			None
+		)
+
+		self.assertEqual(result, self.result['absent'])
+		self.assertIsNone(info)
+
 	# run success (absent - create -> present - other action -> present)
 	def test_run_success_absent(self):
 		with mock.patch('niftycloud_fw.describe_security_group', self.mockNotFoundSecurityGroup):
@@ -583,10 +1063,16 @@ niftycloud_api_response_sample = dict(
 </DescribeSecurityGroupsResponse>
 ''',
 	createSecurityGroup = '''
-<CreateSecurityGroupResponse xmlns="https://cp.cloud.nifty.com/api/">	
+<CreateSecurityGroupResponse xmlns="https://cp.cloud.nifty.com/api/">
  <requestId>320fc738-a1c7-4a2f-abcb-20813a4e997c</requestId>
  <return>true</return>
 </CreateSecurityGroupResponse>
+''',
+	updateSecurityGroup = '''
+<UpdateSecurityGroupResponse xmlns="https://cp.cloud.nifty.com/api/">
+ <requestId>320fc738-a1c7-4a2f-abcb-20813a4e997c</requestId>
+ <return>true</return>
+</UpdateSecurityGroupResponse>
 ''',
 	internalServerError = '''
 <Response>

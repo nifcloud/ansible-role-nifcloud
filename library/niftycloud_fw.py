@@ -254,13 +254,192 @@ def create_security_group(module, result, security_group_info):
 
 	return (result, security_group_info)
 
+def update_security_group_attribute(module, result, security_group_info, params):
+	result              = copy.deepcopy(result)
+	security_group_info = copy.deepcopy(security_group_info)
+	if security_group_info is None:
+		return (result, security_group_info)
+
+	current_method_name = sys._getframe().f_code.co_name
+	goal_state          = 'present'
+	group_name          = module.params['group_name']
+
+	res = request_to_api(module, 'POST', 'UpdateSecurityGroup', params)
+
+	if res['status'] == 200:
+		for retry_count in range(10):
+			(result, security_group_info) = describe_security_group(module, result)
+			current_state = result.get('state')
+			if current_state == goal_state:
+				break
+			else:
+				time.sleep(10)
+
+		if current_state != goal_state:
+			fail(module, result, 'changes failed',
+				current_method = current_method_name,
+				group_name     = group_name
+			)
+	else:
+		error_info = get_api_error(res['xml_body'])
+		fail(module, result, 'changes failed',
+			current_method = current_method_name,
+			group_name     = group_name,
+			**error_info
+		)
+
+	return (result, security_group_info)
+
+def update_security_group_description(module, result, security_group_info):
+	result              = copy.deepcopy(result)
+	security_group_info = copy.deepcopy(security_group_info)
+	if security_group_info is None:
+		return (result, security_group_info)
+
+	current_method_name = sys._getframe().f_code.co_name
+	group_name          = module.params['group_name']
+
+	# skip check
+	current_description = security_group_info.get('description')
+	goal_description    = module.params.get('description')
+	if goal_description is None or goal_description == current_description:
+		return (result, security_group_info)
+
+	# update description
+	params = dict(
+		GroupName              = group_name,
+		GroupDescriptionUpdate = goal_description,
+	)
+	(result, security_group_info) = update_security_group_attribute(module, result, security_group_info, params)
+
+	# update check
+	current_description = security_group_info.get('description')
+	if goal_description != current_description:
+		fail(module, result, 'changes failed',
+			current_method = current_method_name,
+			group_name     = group_name,
+			current_info   = security_group_info,
+		)
+
+	result['changed_attributes']['description'] = goal_description
+	return (result, security_group_info)
+
+def update_security_group_log_limit(module, result, security_group_info):
+	result              = copy.deepcopy(result)
+	security_group_info = copy.deepcopy(security_group_info)
+	if security_group_info is None:
+		return (result, security_group_info)
+
+	current_method_name = sys._getframe().f_code.co_name
+	group_name          = module.params['group_name']
+
+	# skip check
+	current_log_limit = security_group_info.get('log_limit')
+	goal_log_limit    = module.params.get('log_limit')
+	if goal_log_limit is None or goal_log_limit == current_log_limit:
+		return (result, security_group_info)
+
+	# update log_limit
+	params = dict(
+		GroupName           = group_name,
+		GroupLogLimitUpdate = goal_log_limit,
+	)
+	(result, security_group_info) = update_security_group_attribute(module, result, security_group_info, params)
+
+	# update check
+	current_log_limit = security_group_info.get('log_limit')
+	if goal_log_limit != current_log_limit:
+		fail(module, result, 'changes failed',
+			current_method = current_method_name,
+			group_name     = group_name,
+			current_info   = security_group_info,
+		)
+
+	result['changed_attributes']['log_limit'] = goal_log_limit
+	return (result, security_group_info)
+
+def update_security_group_log_filter_net_bios(module, result, security_group_info):
+	result              = copy.deepcopy(result)
+	security_group_info = copy.deepcopy(security_group_info)
+	if security_group_info is None:
+		return (result, security_group_info)
+
+	current_method_name = sys._getframe().f_code.co_name
+	group_name          = module.params['group_name']
+
+	# skip check
+	current_net_bios = security_group_info.get('log_filters').get('net_bios')
+	goal_net_bios    = module.params.get('log_filters').get('net_bios')
+	if goal_net_bios is None or goal_net_bios == current_net_bios:
+		return (result, security_group_info)
+
+	# update log filter net_bios
+	params = dict(
+		GroupName             = group_name,
+		GroupLogFilterNetBios = goal_net_bios,
+	)
+	(result, security_group_info) = update_security_group_attribute(module, result, security_group_info, params)
+
+	# update check
+	current_net_bios = security_group_info.get('log_filters').get('net_bios')
+	if goal_net_bios != current_net_bios:
+		fail(module, result, 'changes failed',
+			current_method = current_method_name,
+			group_name     = group_name,
+			current_info   = security_group_info,
+		)
+
+	result['changed_attributes']['log_filter_net_bios'] = goal_net_bios
+	return (result, security_group_info)
+
+def update_security_group_log_filter_broadcast(module, result, security_group_info):
+	result              = copy.deepcopy(result)
+	security_group_info = copy.deepcopy(security_group_info)
+	if security_group_info is None:
+		return (result, security_group_info)
+
+	current_method_name = sys._getframe().f_code.co_name
+	group_name          = module.params['group_name']
+
+	# skip check
+	current_broadcast = security_group_info.get('log_filters').get('broadcast')
+	goal_broadcast    = module.params.get('log_filters').get('broadcast')
+	if goal_broadcast is None or goal_broadcast == current_broadcast:
+		return (result, security_group_info)
+
+	# update log filter broadcast
+	params = dict(
+		GroupName               = group_name,
+		GroupLogFilterBroadcast = goal_broadcast,
+	)
+	(result, security_group_info) = update_security_group_attribute(module, result, security_group_info, params)
+
+	# update check
+	current_broadcast = security_group_info.get('log_filters').get('broadcast')
+	if goal_broadcast != current_broadcast:
+		fail(module, result, 'changes failed',
+			current_method = current_method_name,
+			group_name     = group_name,
+			current_info   = security_group_info,
+		)
+
+	result['changed_attributes']['log_filter_broadcast'] = goal_broadcast
+	return (result, security_group_info)
+
 def update_security_group(module, result, security_group_info):
 	result              = copy.deepcopy(result)
 	security_group_info = copy.deepcopy(security_group_info)
 	if security_group_info is None:
 		return (result, security_group_info)
 
-	# TODO
+	(result, security_group_info) = update_security_group_description(module, result, security_group_info)
+
+	(result, security_group_info) = update_security_group_log_limit(module, result, security_group_info)
+
+	(result, security_group_info) = update_security_group_log_filter_net_bios(module, result, security_group_info)
+
+	(result, security_group_info) = update_security_group_log_filter_broadcast(module, result, security_group_info)
+
 	return (result, security_group_info)
 
 def authorize_security_group(module, result, security_group_info):
