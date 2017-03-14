@@ -88,7 +88,13 @@ class TestNiftycloud(unittest.TestCase):
 				net_bios  = False,
 				broadcast = False,
 			),
-			ip_permissions = [],
+			ip_permissions = [
+				dict(
+					in_out      = 'OUT',
+					ip_protocol = 'HTTP',
+					cidr_ip     = '0.0.0.0/0',
+				),
+			],
 		)
 
 		self.mockRequestsGetDescribeSecurityGroups = mock.MagicMock(
@@ -131,6 +137,12 @@ class TestNiftycloud(unittest.TestCase):
 			return_value=mock.MagicMock(
 				status_code = 200,
 				text = self.xml['updateSecurityGroup']
+			))
+
+		self.mockRequestsPostAuthorizeSecurityGroup = mock.MagicMock(
+			return_value=mock.MagicMock(
+				status_code = 200,
+				text = self.xml['authorizeSecurityGroup']
 			))
 
 		self.mockRequestsInternalServerError = mock.MagicMock(
@@ -277,6 +289,388 @@ class TestNiftycloud(unittest.TestCase):
 				group_name = 'fw001'
 			)
 		self.assertEqual(cm.exception.message, 'failed')
+
+	# contains_ip_permissions true case 1
+	def test_contains_ip_permissions_true_case_1(self):
+		ip_permissions = [
+			dict(
+				in_out      = 'OUT',
+				ip_protocol = 'ANY',
+				cidr_ip     = '0.0.0.0/0',
+				description = 'all outgoing protocols are allow',
+			),
+			dict(
+				in_out      = 'IN',
+				ip_protocol = 'UDP',
+				from_port   = 20000,
+				to_port     = 29999,
+				group_name  = 'admin',
+			),
+		]
+		ip_permission = dict(
+			in_out      = 'OUT',
+			ip_protocol = 'ANY',
+			cidr_ip     = '0.0.0.0/0',
+			description = None,
+			from_port   = None,
+			to_port     = None,
+			group_name  = None,
+		)
+		self.assertTrue(niftycloud_fw.contains_ip_permissions(ip_permissions, ip_permission))
+
+	# contains_ip_permissions true case 2
+	def test_contains_ip_permissions_true_case_2(self):
+		ip_permissions = [
+			dict(
+				in_out      = 'OUT',
+				ip_protocol = 'ANY',
+				cidr_ip     = '0.0.0.0/0',
+				description = 'all outgoing protocols are allow',
+			),
+			dict(
+				in_out      = 'IN',
+				ip_protocol = 'UDP',
+				from_port   = 20000,
+				to_port     = 29999,
+				group_name  = 'admin',
+			),
+		]
+		ip_permission = dict(
+			in_out      = 'IN',
+			ip_protocol = 'UDP',
+			from_port   = 20000,
+			to_port     = 29999,
+			group_name  = 'admin',
+			description = 'dummy',
+			cidr_ip     = None,
+		)
+		self.assertTrue(niftycloud_fw.contains_ip_permissions(ip_permissions, ip_permission))
+
+	# contains_ip_permissions true case 3
+	def test_contains_ip_permissions_true_case_3(self):
+		ip_permissions = [
+			dict(
+				in_out      = 'OUT',
+				ip_protocol = 'ANY',
+				cidr_ip     = '0.0.0.0/0',
+				description = 'all outgoing protocols are allow',
+			),
+			dict(
+				in_out      = 'IN',
+				ip_protocol = 'UDP',
+				from_port   = 20000,
+				to_port     = 20000,
+				group_name  = 'admin',
+			),
+		]
+		ip_permission = dict(
+			in_out      = 'IN',
+			ip_protocol = 'UDP',
+			from_port   = 20000,
+			to_port     = None,
+			group_name  = 'admin',
+			description = 'dummy',
+			cidr_ip     = None,
+		)
+		self.assertTrue(niftycloud_fw.contains_ip_permissions(ip_permissions, ip_permission))
+
+	# contains_ip_permissions true case 4
+	def test_contains_ip_permissions_true_case_4(self):
+		ip_permissions = [
+			dict(
+				in_out      = 'OUT',
+				ip_protocol = 'ANY',
+				cidr_ip     = '0.0.0.0/0',
+				description = 'all outgoing protocols are allow',
+			),
+			dict(
+				in_out      = 'IN',
+				ip_protocol = 'UDP',
+				from_port   = 20000,
+				group_name  = 'admin',
+			),
+		]
+		ip_permission = dict(
+			in_out      = 'IN',
+			ip_protocol = 'UDP',
+			from_port   = 20000,
+			to_port     = 20000,
+			group_name  = 'admin',
+			description = 'dummy',
+			cidr_ip     = None,
+		)
+		self.assertTrue(niftycloud_fw.contains_ip_permissions(ip_permissions, ip_permission))
+
+	# has_ip_permission false case 1
+	def test_contains_ip_permissions_false_case_1(self):
+		ip_permissions = [
+			dict(
+				in_out      = 'OUT',
+				ip_protocol = 'ANY',
+				cidr_ip     = '0.0.0.0/0',
+				description = 'all outgoing protocols are allow',
+			),
+			dict(
+				in_out      = 'IN',
+				ip_protocol = 'TCP',
+				from_port   = 20000,
+				to_port     = 29999,
+				group_name  = 'admin',
+			),
+		]
+		ip_permission = dict(
+			in_out      = 'IN',
+			ip_protocol = 'ANY',
+			cidr_ip     = '0.0.0.0/0',
+			description = 'all outgoing protocols are allow',
+		)
+		self.assertFalse(niftycloud_fw.contains_ip_permissions(ip_permissions, ip_permission))
+
+	# contains_ip_permissions false case 2
+	def test_contains_ip_permissions_false_case_2(self):
+		ip_permissions = [
+			dict(
+				in_out      = 'OUT',
+				ip_protocol = 'ANY',
+				cidr_ip     = '0.0.0.0/0',
+				description = 'all outgoing protocols are allow',
+			),
+			dict(
+				in_out      = 'IN',
+				ip_protocol = 'TCP',
+				from_port   = 20000,
+				to_port     = 29999,
+				group_name  = 'admin',
+			),
+		]
+		ip_permission = dict(
+			in_out      = 'OUT',
+			ip_protocol = 'ICMP',
+			cidr_ip     = '0.0.0.0/0',
+			description = 'all outgoing protocols are allow',
+		)
+		self.assertFalse(niftycloud_fw.contains_ip_permissions(ip_permissions, ip_permission))
+
+	# contains_ip_permissions false case 3
+	def test_contains_ip_permissions_false_case_3(self):
+		ip_permissions = [
+			dict(
+				in_out      = 'OUT',
+				ip_protocol = 'ANY',
+				cidr_ip     = '0.0.0.0/0',
+				description = 'all outgoing protocols are allow',
+			),
+			dict(
+				in_out      = 'IN',
+				ip_protocol = 'TCP',
+				from_port   = 20000,
+				to_port     = 29999,
+				group_name  = 'admin',
+			),
+		]
+		ip_permission = dict(
+			in_out      = 'OUT',
+			ip_protocol = 'ALL',
+			cidr_ip     = '10.0.0.0/16',
+			description = 'all outgoing protocols are allow',
+		)
+		self.assertFalse(niftycloud_fw.contains_ip_permissions(ip_permissions, ip_permission))
+
+	# contains_ip_permissions false case 4
+	def test_contains_ip_permissions_false_case_3(self):
+		ip_permissions = [
+			dict(
+				in_out      = 'OUT',
+				ip_protocol = 'ANY',
+				cidr_ip     = '0.0.0.0/0',
+				description = 'all outgoing protocols are allow',
+			),
+			dict(
+				in_out      = 'IN',
+				ip_protocol = 'TCP',
+				from_port   = 20000,
+				to_port     = 29999,
+				group_name  = 'admin',
+			),
+		]
+		ip_permission = dict(
+			in_out      = 'IN',
+			ip_protocol = 'TCP',
+			from_port   = 10000,
+			to_port     = 29999,
+			group_name  = 'admin',
+		)
+		self.assertFalse(niftycloud_fw.contains_ip_permissions(ip_permissions, ip_permission))
+
+	# contains_ip_permissions false case 5
+	def test_contains_ip_permissions_false_case_5(self):
+		ip_permissions = [
+			dict(
+				in_out      = 'OUT',
+				ip_protocol = 'ANY',
+				cidr_ip     = '0.0.0.0/0',
+				description = 'all outgoing protocols are allow',
+			),
+			dict(
+				in_out      = 'IN',
+				ip_protocol = 'TCP',
+				from_port   = 20000,
+				to_port     = 29999,
+				group_name  = 'admin',
+			),
+		]
+		ip_permission = dict(
+			in_out      = 'IN',
+			ip_protocol = 'TCP',
+			from_port   = 20000,
+			to_port     = 30000,
+			group_name  = 'admin',
+		)
+		self.assertFalse(niftycloud_fw.contains_ip_permissions(ip_permissions, ip_permission))
+
+	# contains_ip_permissions false case 6
+	def test_contains_ip_permissions_false_case_6(self):
+		ip_permissions = [
+			dict(
+				in_out      = 'OUT',
+				ip_protocol = 'ANY',
+				cidr_ip     = '0.0.0.0/0',
+				description = 'all outgoing protocols are allow',
+			),
+			dict(
+				in_out      = 'IN',
+				ip_protocol = 'TCP',
+				from_port   = 20000,
+				to_port     = 29999,
+				group_name  = 'admin',
+			),
+		]
+		ip_permission = dict(
+			in_out      = 'IN',
+			ip_protocol = 'TCP',
+			from_port   = 20000,
+			to_port     = 29999,
+			group_name  = 'default',
+		)
+		self.assertFalse(niftycloud_fw.contains_ip_permissions(ip_permissions, ip_permission))
+
+	# except_ip_permissions case 1
+	def test_except_ip_permissions_case_1(self):
+		ip_permissions_a = [
+			dict(
+				in_out      = 'OUT',
+				ip_protocol = 'ANY',
+				cidr_ip     = '0.0.0.0/0',
+				description = 'all outgoing protocols are allow',
+			),
+			dict(
+				in_out      = 'IN',
+				ip_protocol = 'TCP',
+				from_port   = 20000,
+				to_port     = 29999,
+				group_name  = 'admin',
+			),
+		]
+		ip_permissions_b = []
+
+		self.assertEqual(
+			niftycloud_fw.except_ip_permissions(ip_permissions_a, ip_permissions_b),
+			ip_permissions_a
+		)
+
+	# except_ip_permissions case 2
+	def test_except_ip_permissions_case_2(self):
+		ip_permissions_a = [
+			dict(
+				in_out      = 'OUT',
+				ip_protocol = 'ANY',
+				cidr_ip     = '0.0.0.0/0',
+				description = 'all outgoing protocols are allow',
+			),
+			dict(
+				in_out      = 'IN',
+				ip_protocol = 'TCP',
+				from_port   = 20000,
+				to_port     = 29999,
+				group_name  = 'admin',
+			),
+		]
+		ip_permissions_b = ip_permissions_a
+
+		self.assertEqual(
+			niftycloud_fw.except_ip_permissions(ip_permissions_a, ip_permissions_b),
+			[]
+		)
+
+	# except_ip_permissions case 3
+	def test_except_ip_permissions_case_3(self):
+		ip_permissions_a = [
+			dict(
+				in_out      = 'OUT',
+				ip_protocol = 'ANY',
+				cidr_ip     = '0.0.0.0/0',
+				description = 'all outgoing protocols are allow',
+			),
+			dict(
+				in_out      = 'IN',
+				ip_protocol = 'TCP',
+				from_port   = 20000,
+				to_port     = 29999,
+				group_name  = 'admin',
+			),
+		]
+		ip_permissions_b = [
+			dict(
+				in_out      = 'OUT',
+				ip_protocol = 'ANY',
+				cidr_ip     = '0.0.0.0/0',
+				description = 'all outgoing protocols are allow',
+			),
+		]
+
+		self.assertEqual(
+			niftycloud_fw.except_ip_permissions(ip_permissions_a, ip_permissions_b),
+			[
+				dict(
+					in_out      = 'IN',
+					ip_protocol = 'TCP',
+					from_port   = 20000,
+					to_port     = 29999,
+					group_name  = 'admin',
+				),
+			]
+		)
+
+	# except_ip_permissions case 4
+	def test_except_ip_permissions_case_4(self):
+		ip_permissions_a = [
+			dict(
+				in_out      = 'OUT',
+				ip_protocol = 'ANY',
+				cidr_ip     = '0.0.0.0/0',
+				description = 'all outgoing protocols are allow',
+			),
+		]
+		ip_permissions_b = [
+			dict(
+				in_out      = 'OUT',
+				ip_protocol = 'ANY',
+				cidr_ip     = '0.0.0.0/0',
+				description = 'all outgoing protocols are allow',
+			),
+			dict(
+				in_out      = 'IN',
+				ip_protocol = 'TCP',
+				from_port   = 20000,
+				to_port     = 29999,
+				group_name  = 'admin',
+			),
+		]
+
+		self.assertEqual(
+			niftycloud_fw.except_ip_permissions(ip_permissions_a, ip_permissions_b),
+			[]
+		)
 
 	# describe present
 	def test_describe_security_group_present(self):
@@ -904,6 +1298,87 @@ class TestNiftycloud(unittest.TestCase):
 		self.assertEqual(result, self.result['absent'])
 		self.assertIsNone(info)
 
+	# authorize success
+	def test_authorize_security_group_success(self):
+		changed_security_group_info = dict(
+			copy.deepcopy(self.security_group_info),
+			ip_permissions = list(
+				self.security_group_info['ip_permissions'] + self.mockModule.params['ip_permissions'],
+			)
+		)
+		mock_describe_security_group = mock.MagicMock(
+			return_value=(
+				self.result['present'],
+				changed_security_group_info,
+			))
+
+		with mock.patch('requests.post', self.mockRequestsPostAuthorizeSecurityGroup):
+			with mock.patch('niftycloud_fw.describe_security_group', mock_describe_security_group):
+				(result, info) = niftycloud_fw.authorize_security_group(
+					self.mockModule,
+					self.result['present'],
+					self.security_group_info
+				)
+
+		self.assertEqual(result, dict(
+			created = False,
+			changed_attributes = dict(
+				number_of_authorize_rules = len(self.mockModule.params['ip_permissions']),
+			),
+			state = 'present',
+		))
+		self.assertEqual(info, changed_security_group_info)
+
+	# authorize ip_permissions are no change  * do nothing
+	def test_authorize_security_group_skip(self):
+		changed_security_group_info = dict(
+			copy.deepcopy(self.security_group_info),
+			ip_permissions = self.mockModule.params['ip_permissions'],
+		)
+
+		(result, info) = niftycloud_fw.authorize_security_group(
+			self.mockModule,
+			self.result['present'],
+			changed_security_group_info
+		)
+
+		self.assertEqual(result, self.result['present'])
+		self.assertEqual(info, changed_security_group_info)
+
+	# authorize absent  * do nothing
+	def test_authorize_security_group_absent(self):
+		(result, info) = niftycloud_fw.authorize_security_group(
+			self.mockModule,
+			self.result['absent'],
+			None
+		)
+
+		self.assertEqual(result, self.result['absent'])
+		self.assertIsNone(info)
+
+	# authorize failed
+	def test_authorize_security_group_failed(self):
+		with mock.patch('requests.post', self.mockRequestsPostAuthorizeSecurityGroup):
+			with mock.patch('niftycloud_fw.describe_security_group', self.mockDescribeSecurityGroup):
+				with self.assertRaises(Exception) as cm:
+					niftycloud_fw.authorize_security_group(
+						self.mockModule,
+						self.result['present'],
+						self.security_group_info
+					)
+		self.assertEqual(cm.exception.message, 'failed')
+
+	# authorize request failed
+	def test_authorize_security_group_request_failed(self):
+		with mock.patch('requests.post', self.mockRequestsInternalServerError):
+			with self.assertRaises(Exception) as cm:
+				(result, info) = niftycloud_fw.authorize_security_group(
+					self.mockModule,
+					self.result['present'],
+					self.security_group_info
+				)
+		self.assertEqual(cm.exception.message, 'failed')
+
 	# run success (absent - create -> present - other action -> present)
 	def test_run_success_absent(self):
 		with mock.patch('niftycloud_fw.describe_security_group', self.mockNotFoundSecurityGroup):
@@ -1073,6 +1548,12 @@ niftycloud_api_response_sample = dict(
  <requestId>320fc738-a1c7-4a2f-abcb-20813a4e997c</requestId>
  <return>true</return>
 </UpdateSecurityGroupResponse>
+''',
+	authorizeSecurityGroup = '''
+<AuthorizeSecurityGroupIngressResponse xmlns="https://cp.cloud.nifty.com/api/">
+ <requestId>320fc738-a1c7-4a2f-abcb-20813a4e997c</requestId>
+ <return>true</return>
+</AuthorizeSecurityGroupIngressResponse>
 ''',
 	internalServerError = '''
 <Response>

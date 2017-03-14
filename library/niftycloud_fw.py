@@ -128,6 +128,38 @@ def fail(module, result, msg, **args):
 		**args
 	)
 
+def contains_ip_permissions(ip_permissions, target_ip_permission):
+	for ip_permission in ip_permissions:
+		# dont check description
+		if (
+			(ip_permission.get('in_out')      == target_ip_permission.get('in_out'))      and
+			(ip_permission.get('ip_protocol') == target_ip_permission.get('ip_protocol')) and
+			(ip_permission.get('group_name')  == target_ip_permission.get('group_name'))  and
+			(ip_permission.get('cidr_ip')     == target_ip_permission.get('cidr_ip'))     and
+			(ip_permission.get('from_port')   == target_ip_permission.get('from_port'))   and
+			(
+				(
+					(ip_permission.get('to_port') == target_ip_permission.get('to_port'))
+				) or (
+					(ip_permission.get('to_port') is None) and
+					(target_ip_permission.get('from_port') == target_ip_permission.get('to_port'))
+				) or (
+					(target_ip_permission.get('to_port') is None) and
+					(ip_permission.get('to_port') == ip_permission.get('from_port'))
+				)
+			)
+		):
+			return True
+	return False
+
+def except_ip_permissions(ip_permissions_a, ip_permissions_b):
+	ip_permissions = list(
+		ip_permission_a\
+		for ip_permission_a in ip_permissions_a\
+		if not contains_ip_permissions(ip_permissions_b, ip_permission_a)
+	)
+	return ip_permissions
+
 def describe_security_group(module, result):
 	result              = copy.deepcopy(result)
 	security_group_info = None
@@ -448,7 +480,81 @@ def authorize_security_group(module, result, security_group_info):
 	if security_group_info is None:
 		return (result, security_group_info)
 
-	# TODO
+	current_method_name = sys._getframe().f_code.co_name
+	goal_state          = 'present'
+	group_name          = module.params['group_name']
+
+	# get target (goal_ip_permissions - current_ip_permissions = authorize_rules)
+	current_ip_permissions = security_group_info.get('ip_permissions')
+	goal_ip_permissions    = module.params.get('ip_permissions', list())
+	authorize_rules        = except_ip_permissions(goal_ip_permissions, current_ip_permissions)
+
+	# skip check
+	authorize_rules_size = len(authorize_rules)
+	if authorize_rules_size == 0:
+		return (result, security_group_info)
+
+	# update ip_permissions
+	for authorize_rule in authorize_rules:
+		params = dict(
+			GroupName = group_name,
+		)
+
+		params['IpPermissions.1.InOut']       = authorize_rule.get('in_out')
+		params['IpPermissions.1.IpProtocol']  = authorize_rule.get('ip_protocol')
+		params['IpPermissions.1.Description'] = authorize_rule.get('description', '')
+
+		_from_port = authorize_rule.get('from_port')
+		if _from_port is not None:
+			params['IpPermissions.1.FromPort'] = _from_port
+
+		_to_port = authorize_rule.get('to_port')
+		if _to_port is not None:
+			params['IpPermissions.1.ToPort'] = _to_port
+
+		_group_name = authorize_rule.get('group_name')
+		if _group_name is not None:
+			params['IpPermissions.1.Groups.1.GroupName'] = _group_name
+
+		_cidr_ip = authorize_rule.get('cidr_ip')
+		if _cidr_ip is not None:
+			params['IpPermissions.1.IpRanges.1.CidrIp'] = _cidr_ip
+
+		res = request_to_api(module, 'POST', 'AuthorizeSecurityGroupIngress', params)
+
+		if res['status'] == 200:
+			for retry_count in range(10):
+				(result, security_group_info) = describe_security_group(module, result)
+				current_state = result.get('state')
+				if current_state == goal_state:
+					break
+				else:
+					time.sleep(10)
+
+			if current_state != goal_state:
+				fail(module, result, 'changes failed',
+					current_method = current_method_name,
+					group_name     = group_name
+				)
+		else:
+			error_info = get_api_error(res['xml_body'])
+			fail(module, result, 'changes failed',
+				current_method = current_method_name,
+				group_name     = group_name,
+				**error_info
+			)
+
+	# update check
+	current_ip_permissions = security_group_info.get('ip_permissions')
+	authorize_rules        = except_ip_permissions(goal_ip_permissions, current_ip_permissions)
+	if len(authorize_rules) != 0:
+		fail(module, result, 'changes failed',
+			current_method = current_method_name,
+			group_name     = group_name,
+			current_info   = security_group_info,
+		)
+
+	result['changed_attributes']['number_of_authorize_rules'] = authorize_rules_size
 	return (result, security_group_info)
 
 def revoke_security_group(module, result, security_group_info):
