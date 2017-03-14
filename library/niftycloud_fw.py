@@ -563,7 +563,80 @@ def revoke_security_group(module, result, security_group_info):
 	if security_group_info is None:
 		return (result, security_group_info)
 
-	# TODO
+	current_method_name = sys._getframe().f_code.co_name
+	goal_state          = 'present'
+	group_name          = module.params['group_name']
+
+	# get target (current_ip_permissions - goal_ip_permissions = revoke_rules)
+	current_ip_permissions = security_group_info.get('ip_permissions')
+	goal_ip_permissions    = module.params.get('ip_permissions', list())
+	revoke_rules           = except_ip_permissions(current_ip_permissions, goal_ip_permissions)
+
+	# skip check
+	revoke_rules_size = len(revoke_rules)
+	if revoke_rules_size == 0:
+		return (result, security_group_info)
+
+	# update ip_permissions
+	for revoke_rule in revoke_rules:
+		params = dict(
+			GroupName = group_name,
+		)
+
+		params['IpPermissions.1.InOut']      = revoke_rule.get('in_out')
+		params['IpPermissions.1.IpProtocol'] = revoke_rule.get('ip_protocol')
+
+		_from_port = revoke_rule.get('from_port')
+		if _from_port is not None:
+			params['IpPermissions.1.FromPort'] = _from_port
+
+		_to_port = revoke_rule.get('to_port')
+		if _to_port is not None:
+			params['IpPermissions.1.ToPort'] = _to_port
+
+		_group_name = revoke_rule.get('group_name')
+		if _group_name is not None:
+			params['IpPermissions.1.Groups.1.GroupName'] = _group_name
+
+		_cidr_ip = revoke_rule.get('cidr_ip')
+		if _cidr_ip is not None:
+			params['IpPermissions.1.IpRanges.1.CidrIp'] = _cidr_ip
+
+		res = request_to_api(module, 'POST', 'RevokeSecurityGroupIngress', params)
+
+		if res['status'] == 200:
+			for retry_count in range(10):
+				(result, security_group_info) = describe_security_group(module, result)
+				current_state = result.get('state')
+				if current_state == goal_state:
+					break
+				else:
+					time.sleep(10)
+
+			if current_state != goal_state:
+				fail(module, result, 'changes failed',
+					current_method = current_method_name,
+					group_name     = group_name
+				)
+		else:
+			error_info = get_api_error(res['xml_body'])
+			fail(module, result, 'changes failed',
+				current_method = current_method_name,
+				group_name     = group_name,
+				**error_info
+			)
+
+	# update check
+	current_ip_permissions = security_group_info.get('ip_permissions')
+	revoke_rules           = except_ip_permissions(current_ip_permissions, goal_ip_permissions)
+	if len(revoke_rules) != 0:
+		fail(module, result, 'changes failed',
+			current_method = current_method_name,
+			group_name     = group_name,
+			current_info   = security_group_info,
+		)
+
+	result['changed_attributes']['number_of_revoke_rules'] = revoke_rules_size
 	return (result, security_group_info)
 
 def run(module):

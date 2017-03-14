@@ -94,6 +94,13 @@ class TestNiftycloud(unittest.TestCase):
 					ip_protocol = 'HTTP',
 					cidr_ip     = '0.0.0.0/0',
 				),
+				dict(
+					in_out      = 'OUT',
+					ip_protocol = 'TCP',
+					from_port   = 10000,
+					to_port     = 19999,
+					group_name  = 'admin',
+				),
 			],
 		)
 
@@ -143,6 +150,12 @@ class TestNiftycloud(unittest.TestCase):
 			return_value=mock.MagicMock(
 				status_code = 200,
 				text = self.xml['authorizeSecurityGroup']
+			))
+
+		self.mockRequestsPostRevokeSecurityGroup = mock.MagicMock(
+			return_value=mock.MagicMock(
+				status_code = 200,
+				text = self.xml['revokeSecurityGroup']
 			))
 
 		self.mockRequestsInternalServerError = mock.MagicMock(
@@ -1379,6 +1392,91 @@ class TestNiftycloud(unittest.TestCase):
 				)
 		self.assertEqual(cm.exception.message, 'failed')
 
+	# revoke success
+	def test_revoke_security_group_success(self):
+		security_group_info = dict(
+			copy.deepcopy(self.security_group_info),
+			ip_permissions = list(
+				self.security_group_info['ip_permissions'] + self.mockModule.params['ip_permissions'],
+			),
+		)
+		changed_security_group_info = dict(
+			copy.deepcopy(self.security_group_info),
+			ip_permissions = self.mockModule.params['ip_permissions'],
+		)
+		mock_describe_security_group = mock.MagicMock(
+			return_value=(
+				self.result['present'],
+				changed_security_group_info,
+			))
+
+		with mock.patch('requests.post', self.mockRequestsPostRevokeSecurityGroup):
+			with mock.patch('niftycloud_fw.describe_security_group', mock_describe_security_group):
+				(result, info) = niftycloud_fw.revoke_security_group(
+					self.mockModule,
+					self.result['present'],
+					security_group_info
+				)
+
+		self.assertEqual(result, dict(
+			created = False,
+			changed_attributes = dict(
+				number_of_revoke_rules = len(self.security_group_info['ip_permissions']),
+			),
+			state = 'present',
+		))
+		self.assertEqual(info, changed_security_group_info)
+
+	# revoke ip_permissions are no change  * do nothing
+	def test_revoke_security_group_skip(self):
+		security_group_info = dict(
+			copy.deepcopy(self.security_group_info),
+			ip_permissions = self.mockModule.params['ip_permissions'],
+		)
+
+		(result, info) = niftycloud_fw.revoke_security_group(
+			self.mockModule,
+			self.result['present'],
+			security_group_info
+		)
+
+		self.assertEqual(result, self.result['present'])
+		self.assertEqual(info, security_group_info)
+
+	# revoke absent  * do nothing
+	def test_revoke_security_group_absent(self):
+		(result, info) = niftycloud_fw.revoke_security_group(
+			self.mockModule,
+			self.result['absent'],
+			None
+		)
+
+		self.assertEqual(result, self.result['absent'])
+		self.assertIsNone(info)
+
+	# revoke failed
+	def test_revoke_security_group_failed(self):
+		with mock.patch('requests.post', self.mockRequestsPostRevokeSecurityGroup):
+			with mock.patch('niftycloud_fw.describe_security_group', self.mockDescribeSecurityGroup):
+				with self.assertRaises(Exception) as cm:
+					niftycloud_fw.revoke_security_group(
+						self.mockModule,
+						self.result['present'],
+						self.security_group_info
+					)
+		self.assertEqual(cm.exception.message, 'failed')
+
+	# revoke request failed
+	def test_revoke_security_group_request_failed(self):
+		with mock.patch('requests.post', self.mockRequestsInternalServerError):
+			with self.assertRaises(Exception) as cm:
+				(result, info) = niftycloud_fw.revoke_security_group(
+					self.mockModule,
+					self.result['present'],
+					self.security_group_info
+				)
+		self.assertEqual(cm.exception.message, 'failed')
+
 	# run success (absent - create -> present - other action -> present)
 	def test_run_success_absent(self):
 		with mock.patch('niftycloud_fw.describe_security_group', self.mockNotFoundSecurityGroup):
@@ -1554,6 +1652,12 @@ niftycloud_api_response_sample = dict(
  <requestId>320fc738-a1c7-4a2f-abcb-20813a4e997c</requestId>
  <return>true</return>
 </AuthorizeSecurityGroupIngressResponse>
+''',
+	revokeSecurityGroup = '''
+<RevokeSecurityGroupIngressResponse xmlns="https://cp.cloud.nifty.com/api/">
+ <requestId>320fc738-a1c7-4a2f-abcb-20813a4e997c</requestId>
+ <return>true</return>
+</RevokeSecurityGroupIngressResponse>
 ''',
 	internalServerError = '''
 <Response>
