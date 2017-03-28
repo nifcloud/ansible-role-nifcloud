@@ -25,6 +25,7 @@ options:
 		description:
 			- Target firewall group ID
 		required: true
+		aliases: "name"
         description:
                 description:
                         - Description of target firewall group
@@ -677,7 +678,7 @@ def main():
 			access_key        = dict(required=True,  type='str'),
 			secret_access_key = dict(required=True,  type='str',  no_log=True),
 			endpoint          = dict(required=True,  type='str'),
-			group_name        = dict(required=True,  type='str'),
+			group_name        = dict(required=True,  type='str',  aliases=['name']),
 			description       = dict(required=False, type='str',  default=None),
 			availability_zone = dict(required=False, type='str',  default=None),
 			log_limit         = dict(required=False, type='int',  default=None),

@@ -16,18 +16,18 @@ Create or update, authorize, revoke a firewall group.
 
 ## Options
 
-| parameter            | required | default    | type | choices   | comments                                                                                          |
-|----------------------|----------|------------|------|-----------|---------------------------------------------------------------------------------------------------|
-| access_key           | yes      |            | str  |           | NIFTY Cloud API access key                                                                        |
-| secret_access_key    | yes      |            | str  |           | NIFTY Cloud API secret access key                                                                 |
-| endpoint             | yes      |            | str  |           | API endpoint of target region                                                                     |
-| group_name           | no       |            | str  |           | Target firewall group ID                                                                          |
-| description          | no       |            | str  |           | Description of target firewall group                                                              |
-| availability_zone    | no       |            | str  |           | Availability zone                                                                                 |
-| log_limit            | no       |            | int  |           | The upper limit number of logs to retain of communication rejected by the firewall settings rules |
-| log_filters          | no       | dict()     | dict |           | Options for restrain broadcast logs                                                               |
-| ip_permissions       | no       | list()     | list |           | List of rules that allows incoming or outgoing communication to resources                         |
-| state                | no       | "present"  | str  | "present" | Goal status                                                                                       |
+| parameter            | required | default    | type | choices   | aliases | comments                                                                                          |
+|----------------------|----------|------------|------|-----------|---------|---------------------------------------------------------------------------------------------------|
+| access_key           | yes      |            | str  |           |         | NIFTY Cloud API access key                                                                        |
+| secret_access_key    | yes      |            | str  |           |         | NIFTY Cloud API secret access key                                                                 |
+| endpoint             | yes      |            | str  |           |         | API endpoint of target region                                                                     |
+| group_name           | yes      |            | str  |           | name    | Target firewall group ID                                                                          |
+| description          | no       |            | str  |           |         | Description of target firewall group                                                              |
+| availability_zone    | no       |            | str  |           |         | Availability zone                                                                                 |
+| log_limit            | no       |            | int  |           |         | The upper limit number of logs to retain of communication rejected by the firewall settings rules |
+| log_filters          | no       | dict()     | dict |           |         | Options for restrain broadcast logs                                                               |
+| ip_permissions       | no       | list()     | list |           |         | List of rules that allows incoming or outgoing communication to resources                         |
+| state                | no       | "present"  | str  | "present" |         | Goal status                                                                                       |
 
 ## Examples
 
