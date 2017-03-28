@@ -54,12 +54,13 @@ options:
 		default: null
 	state:
 		description:
-			- Goal status ("present" or "absent")
-		required: true
+			- Goal status ("present")
+		required: false
+		default: "present"
 '''
 
 EXAMPLES = '''
-- action: niftycloud_fw access_key="YOUR_ACCESS_KEY" secret_access_key="YOUR_SECRET_ACCESS_KEY" endpoint="west-1.cp.cloud.nifty.com" group_name="fw001" state="present"
+- action: niftycloud_fw access_key="YOUR_ACCESS_KEY" secret_access_key="YOUR_SECRET_ACCESS_KEY" endpoint="west-1.cp.cloud.nifty.com" group_name="fw001"
 '''
 
 def calculate_signature(secret_access_key, method, endpoint, path, params):
@@ -682,7 +683,7 @@ def main():
 			log_limit         = dict(required=False, type='int',  default=None),
 			log_filters       = dict(required=False, type='dict', default=dict()),
 			ip_permissions    = dict(required=False, type='list', default=list()),
-			state             = dict(required=False, type='str',  default='present', choices=['present', 'absent']),
+			state             = dict(required=False, type='str',  default='present', choices=['present']),
 		)
 	)
 	run(module)
