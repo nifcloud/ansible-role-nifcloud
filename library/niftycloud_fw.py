@@ -202,9 +202,11 @@ def describe_security_group(module, result):
 			description = description.text
 
 		# set net_bios
+		# <groupLogFilterNetBios> is return "true"(string) or "false"(string) or nothing
 		log_filter_net_bios = (net_bios.text.lower() != 'false') if net_bios is not None else None
 
 		# set broadcast
+		# <groupLogFilterNetBios> is return "true"(string) or "false"(string) or nothing
 		log_filter_broadcast = (broadcast.text.lower() != 'false') if broadcast is not None else None
 
 		# set ip_permissions
