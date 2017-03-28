@@ -787,6 +787,38 @@ class TestNiftycloud(unittest.TestCase):
 		))
 		self.assertIsNone(info)
 
+	# wait_for_processing success absent
+	def test_wait_for_processing_success_absent(self):
+		with mock.patch('niftycloud_fw.describe_security_group', self.mockNotFoundSecurityGroup):
+			(result, info) = niftycloud_fw.wait_for_processing(self.mockModule, self.result['absent'], 'absent')
+
+		self.assertEqual(result, self.result['absent'])
+		self.assertIsNone(info)
+
+	# wait_for_processing success present
+	def test_wait_for_processing_success_present(self):
+		with mock.patch('niftycloud_fw.describe_security_group', self.mockDescribeSecurityGroup):
+			(result, info) = niftycloud_fw.wait_for_processing(self.mockModule, self.result['absent'], 'present')
+
+		self.assertEqual(result, self.result['present'])
+		self.assertEqual(info,   self.security_group_info)
+
+	# wait_for_processing unmatch absent
+	def test_wait_for_processing_failed_absent(self):
+		with mock.patch('niftycloud_fw.describe_security_group', self.mockDescribeSecurityGroup):
+			with self.assertRaises(Exception) as cm:
+				(result, info) = niftycloud_fw.wait_for_processing(self.mockModule, self.result['absent'], 'absent')
+
+		self.assertEqual(cm.exception.message, 'failed')
+
+	# wait_for_processing unmatch present
+	def test_wait_for_processing_failed_present(self):
+		with mock.patch('niftycloud_fw.describe_security_group', self.mockNotFoundSecurityGroup):
+			with self.assertRaises(Exception) as cm:
+				(result, info) = niftycloud_fw.wait_for_processing(self.mockModule, self.result['absent'], 'present')
+
+		self.assertEqual(cm.exception.message, 'failed')
+
 	# create present  * do nothing
 	def test_create_security_group_skip(self):
 		(result, info) = niftycloud_fw.create_security_group(

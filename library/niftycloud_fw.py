@@ -244,6 +244,26 @@ def describe_security_group(module, result):
 
 	return (result, security_group_info)
 
+def wait_for_processing(module, result, goal_state):
+	current_method_name = sys._getframe().f_code.co_name
+	group_name          = module.params['group_name']
+
+	for retry_count in range(10):
+		(result, security_group_info) = describe_security_group(module, result)
+		current_state = result.get('state')
+		if current_state == goal_state:
+			break
+		else:
+			time.sleep(10)
+
+	if current_state != goal_state:
+		fail(module, result, 'wait fot processing failed',
+			current_method = current_method_name,
+			group_name     = group_name
+		)
+
+	return (result, security_group_info)
+
 def create_security_group(module, result, security_group_info):
 	result              = copy.deepcopy(result)
 	security_group_info = copy.deepcopy(security_group_info)
@@ -263,24 +283,7 @@ def create_security_group(module, result, security_group_info):
 		params["Placement.AvailabilityZone"] = module.params['availability_zone']
 
 	res = request_to_api(module, 'POST', 'CreateSecurityGroup', params)
-
-	if res['status'] == 200:
-		for retry_count in range(10):
-			(result, security_group_info) = describe_security_group(module, result)
-			current_state = result.get('state')
-			if current_state == goal_state:
-				break
-			else:
-				time.sleep(10)
-
-		if current_state == goal_state:
-			result['created'] = True
-		else:
-			fail(module, result, 'changes failed',
-				current_method = current_method_name,
-				group_name     = group_name
-			)
-	else:
+	if res['status'] != 200:
 		error_info = get_api_error(res['xml_body'])
 		fail(module, result, 'changes failed',
 			current_method = current_method_name,
@@ -288,6 +291,10 @@ def create_security_group(module, result, security_group_info):
 			**error_info
 		)
 
+	# wait for processing
+	(result, security_group_info) = wait_for_processing(module, result, goal_state)
+
+	result['created'] = True
 	return (result, security_group_info)
 
 def update_security_group_attribute(module, result, security_group_info, params):
@@ -301,28 +308,16 @@ def update_security_group_attribute(module, result, security_group_info, params)
 	group_name          = module.params['group_name']
 
 	res = request_to_api(module, 'POST', 'UpdateSecurityGroup', params)
-
-	if res['status'] == 200:
-		for retry_count in range(10):
-			(result, security_group_info) = describe_security_group(module, result)
-			current_state = result.get('state')
-			if current_state == goal_state:
-				break
-			else:
-				time.sleep(10)
-
-		if current_state != goal_state:
-			fail(module, result, 'changes failed',
-				current_method = current_method_name,
-				group_name     = group_name
-			)
-	else:
+	if res['status'] != 200:
 		error_info = get_api_error(res['xml_body'])
 		fail(module, result, 'changes failed',
 			current_method = current_method_name,
 			group_name     = group_name,
 			**error_info
 		)
+
+	# wait for processing
+	(result, security_group_info) = wait_for_processing(module, result, goal_state)
 
 	return (result, security_group_info)
 
@@ -528,28 +523,16 @@ def authorize_security_group(module, result, security_group_info):
 			params['IpPermissions.1.IpRanges.1.CidrIp'] = _cidr_ip
 
 		res = request_to_api(module, 'POST', 'AuthorizeSecurityGroupIngress', params)
-
-		if res['status'] == 200:
-			for retry_count in range(10):
-				(result, security_group_info) = describe_security_group(module, result)
-				current_state = result.get('state')
-				if current_state == goal_state:
-					break
-				else:
-					time.sleep(10)
-
-			if current_state != goal_state:
-				fail(module, result, 'changes failed',
-					current_method = current_method_name,
-					group_name     = group_name
-				)
-		else:
+		if res['status'] != 200:
 			error_info = get_api_error(res['xml_body'])
 			fail(module, result, 'changes failed',
 				current_method = current_method_name,
 				group_name     = group_name,
 				**error_info
 			)
+
+		# wait for processing
+		(result, security_group_info) = wait_for_processing(module, result, goal_state)
 
 	# update check
 	current_ip_permissions = security_group_info.get('ip_permissions')
@@ -612,27 +595,16 @@ def revoke_security_group(module, result, security_group_info):
 
 	# revoke ip_permissions
 	res = request_to_api(module, 'POST', 'RevokeSecurityGroupIngress', params)
-	if res['status'] == 200:
-		for retry_count in range(10):
-			(result, security_group_info) = describe_security_group(module, result)
-			current_state = result.get('state')
-			if current_state == goal_state:
-				break
-			else:
-				time.sleep(10)
-
-		if current_state != goal_state:
-			fail(module, result, 'changes failed',
-				current_method = current_method_name,
-				group_name     = group_name
-			)
-	else:
+	if res['status'] != 200:
 		error_info = get_api_error(res['xml_body'])
 		fail(module, result, 'changes failed',
 			current_method = current_method_name,
 			group_name     = group_name,
 			**error_info
 		)
+
+	# wait for processing
+	(result, security_group_info) = wait_for_processing(module, result, goal_state)
 
 	# update check
 	current_ip_permissions = security_group_info.get('ip_permissions')
