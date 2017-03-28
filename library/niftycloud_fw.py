@@ -499,6 +499,9 @@ def authorize_security_group(module, result, security_group_info):
 		return (result, security_group_info)
 
 	# update ip_permissions
+	# > I want IP permissions to be registered in the specified order.
+	# > But, AuthorizeSecurityGroupIngress does not warrants the return order of response XML by IP permissions specified with one request.
+	# > So, I implemented so that all IP permissions to be added are registered one by one.
 	for authorize_rule in authorize_rules:
 		params = dict(
 			GroupName = group_name,
