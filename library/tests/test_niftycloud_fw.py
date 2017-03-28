@@ -1627,6 +1627,7 @@ niftycloud_api_response_sample = dict(
   <item>
    <ownerId></ownerId>
    <groupName>fw002</groupName>
+   <groupDescription />
    <groupStatus>applied</groupStatus>
    <ipPermissions />
    <instancesSet />

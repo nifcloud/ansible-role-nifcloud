@@ -194,7 +194,7 @@ def describe_security_group(module, result):
 		ip_permissions = res['xml_body'].findall('.//{{{nc}}}ipPermissions/{{{nc}}}item'.format(**res['xml_namespace']))
 
 		# set description
-		if description is None:
+		if description is None or description.text is None:
 			description = ''
 		elif isinstance(description.text, unicode):
 			description = description.text.encode('utf-8')
