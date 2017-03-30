@@ -91,56 +91,8 @@ class TestNiftycloud(unittest.TestCase):
 			Description = '/'
 		)
 
-		# calculate a signature with slash URL-encoded
-		calculate_signature_with_slash_encoded = (lambda _secret_access_key, _method, _endpoint, _path, _params:
-			base64.b64encode(
-				hmac.new(
-					_secret_access_key,
-					'\n'.join([
-						_method,
-						_endpoint,
-						_path,
-						'&'.join([
-							'='.join([
-								_v[0],
-								urllib.quote(str(_v[1]), '')
-							]) for _v in sorted(_params.items())
-						])
-					]),
-					hashlib.sha256
-				).digest()
-			)
-		)
-
-		# calculate a signature with slash don't URL-encoded
-		calculate_signature_with_slash_dont_encoded = (lambda _secret_access_key, _method, _endpoint, _path, _params:
-			base64.b64encode(
-				hmac.new(
-					_secret_access_key,
-					'\n'.join([
-						_method,
-						_endpoint,
-						_path,
-						'&'.join([
-							'='.join([
-								_v[0],
-								urllib.quote(str(_v[1])) # '/' is default value of the 2nd argument
-							]) for _v in sorted(_params.items())
-						])
-					]),
-					hashlib.sha256
-				).digest()
-			)
-		)
-
-		signature                         = niftycloud_volume.calculate_signature(secret_access_key, method, endpoint, path, params)
-		signature_with_slash_encoded      = calculate_signature_with_slash_encoded(secret_access_key, method, endpoint, path, params)
-		signature_with_slash_dont_encoded = calculate_signature_with_slash_dont_encoded(secret_access_key, method, endpoint, path, params)
-
-		# signature == signature_with_slash_encoded != signature_with_slash_dont_encoded
+		signature = niftycloud_volume.calculate_signature(secret_access_key, method, endpoint, path, params)
 		self.assertEqual(signature, 'dHOoGcBgO14Roaioryic9IdFPg7G+lihZ8Wyoa25ok4=')
-		self.assertEqual(signature, signature_with_slash_encoded)
-		self.assertNotEqual(signature, signature_with_slash_dont_encoded)
 
 	# method get
 	def test_request_to_api_get(self):
