@@ -206,6 +206,24 @@ class TestNiftycloud(unittest.TestCase):
 		signature = niftycloud_fw.calculate_signature(secret_access_key, method, endpoint, path, params)
 		self.assertEqual(signature, '+05Mgbw/WCN+U6euoFzHIyFi8i9UUTGg1uiNHqYcu38=')
 
+	# calculate signature with string parameter including slash
+	def test_calculate_signature_with_slash(self):
+		secret_access_key = self.mockModule.params['secret_access_key']
+		method = 'GET'
+		endpoint = self.mockModule.params['endpoint']
+		path = '/api/'
+		params = dict(
+			Action           = 'DescribeSecurityGroups',
+			AccessKeyId      = self.mockModule.params['access_key'],
+			SignatureMethod  = 'HmacSHA256',
+			SignatureVersion = '2',
+			GroupName        = self.mockModule.params['group_name'],
+			GroupDescription = '/'
+		)
+
+		signature = niftycloud_fw.calculate_signature(secret_access_key, method, endpoint, path, params)
+		self.assertEqual(signature, 'SsYPHOdKWpiniT39oGNJ5EjJum2gvqlUbozNxM9CSjE=')
+
 	# method get
 	def test_request_to_api_get(self):
 		method = 'GET'
