@@ -98,6 +98,9 @@ class TestNiftycloud(unittest.TestCase):
 		)
 
 		signature = niftycloud_lb.calculate_signature(secret_access_key, method, endpoint, path, params)
+
+		# This constant string is signature calculated by "library/tests/files/calculate_signature_sample.sh".
+		# This shell-script calculate with encoding a slash, like "niftycloud.calculate_signature()".
 		self.assertEqual(signature, 'dHOoGcBgO14Roaioryic9IdFPg7G+lihZ8Wyoa25ok4=')
 
 	# method get
