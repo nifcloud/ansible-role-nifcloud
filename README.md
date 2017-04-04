@@ -38,9 +38,9 @@ roles:
 License
 -------
 
-Apache License, Version 2.0
+This project is licensed under Apache License, Version 2.0. See [LICENSE](/LICENSE.txt) for more details.
 
 Author Information
 ------------------
 
-NIFTYCloud mobile backend team.
+[FUJITSU CLOUD TECHNOLOGIES LIMITED](http://fjct.fujitsu.com/)
