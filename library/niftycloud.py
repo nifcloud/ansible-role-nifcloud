@@ -95,7 +95,7 @@ EXAMPLES = '''
 def calculate_signature(secret_access_key, method, endpoint, path, params):
 	payload = ""
 	for v in sorted(params.items()):
-		payload += '&{0}={1}'.format(v[0], urllib.quote(str(v[1])))
+		payload += '&{0}={1}'.format(v[0], urllib.quote(str(v[1]), ''))
 	payload = payload[1:]
 
 	string_to_sign = [method, endpoint, path, payload]

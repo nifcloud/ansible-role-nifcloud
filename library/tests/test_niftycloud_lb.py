@@ -7,6 +7,7 @@ import unittest
 import mock
 import niftycloud_lb
 import xml.etree.ElementTree as etree
+import urllib, hmac, hashlib, base64
 
 class TestNiftycloud(unittest.TestCase):
 	def setUp(self):
@@ -80,6 +81,27 @@ class TestNiftycloud(unittest.TestCase):
 
 		signature = niftycloud_lb.calculate_signature(secret_access_key, method, endpoint, path, params)
 		self.assertEqual(signature, 'Y7/0nc3dCK9UNkp+w5sh08ybJLQjh69mXOgcxJijDEU=')
+
+	# calculate signature with string parameter including slash
+	def test_calculate_signature_with_slash(self):
+		secret_access_key = self.mockModule.params['secret_access_key']
+		method = 'GET'
+		endpoint = self.mockModule.params['endpoint']
+		path = '/api/'
+		params = dict(
+			Action = 'DescribeInstances',
+			AccessKeyId = self.mockModule.params['access_key'],
+			SignatureMethod = 'HmacSHA256',
+			SignatureVersion = '2',
+			InstanceId = self.mockModule.params['instance_id'],
+			Description = '/'
+		)
+
+		signature = niftycloud_lb.calculate_signature(secret_access_key, method, endpoint, path, params)
+
+		# This constant string is signature calculated by "library/tests/files/calculate_signature_sample.sh".
+		# This shell-script calculate with encoding a slash, like "niftycloud.calculate_signature()".
+		self.assertEqual(signature, 'dHOoGcBgO14Roaioryic9IdFPg7G+lihZ8Wyoa25ok4=')
 
 	# method get
 	def test_request_to_api_get(self):
