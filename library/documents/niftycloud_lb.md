@@ -37,7 +37,7 @@ De-registers or registers an instance of NIFTY Cloud from Load Balancer.
 
 - name: Regist server to load balancer
   local_action:
-    module: niftycloud
+    module: niftycloud_lb
     access_key: "YOUR ACCESS KEY"
     secret_access_key: "YOUR SECRET ACCESS KEY"
     endpoint: "west-1.cp.cloud.nifty.com"
