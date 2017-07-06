@@ -37,6 +37,7 @@ class TestNiftycloud(unittest.TestCase):
 				availability_zone    = 'west-11',
 				log_limit            = 100000,
 				state                = 'present',
+				purge_rules          = False,
 				log_filters          = dict(
 					net_bios  = True,
 					broadcast = True,
@@ -1507,6 +1508,24 @@ class TestNiftycloud(unittest.TestCase):
 			security_group_info
 		)
 
+		self.assertEqual(result, self.result['present'])
+		self.assertEqual(info, security_group_info)
+
+	# revoke ip_permissions are setted no purge_rules * do nothing
+	def test_revoke_security_group_purge_skip(self):
+		security_group_info = dict(
+			copy.deepcopy(self.security_group_info),
+			ip_permissions = self.mockModule.params['ip_permissions'],
+		)
+
+		mock_ip_permissions_removed = self.mockModule
+		mock_ip_permissions_removed['ip_permissions'] = []
+
+		(result, info) = niftycloud_fw.revoke_security_group(
+			mock_ip_permissions_removed,
+			self.result['present'],
+			security_group_info
+		)
 		self.assertEqual(result, self.result['present'])
 		self.assertEqual(info, security_group_info)
 
