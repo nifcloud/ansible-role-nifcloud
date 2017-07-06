@@ -1519,7 +1519,7 @@ class TestNiftycloud(unittest.TestCase):
 		)
 
 		mock_ip_permissions_removed = self.mockModule
-		mock_ip_permissions_removed['ip_permissions'] = []
+		mock_ip_permissions_removed.params['ip_permissions'] = []
 
 		(result, info) = niftycloud_fw.revoke_security_group(
 			mock_ip_permissions_removed,
