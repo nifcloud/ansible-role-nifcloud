@@ -72,9 +72,9 @@ options:
 			- Goal status ("present")
 		required: false
 		default: "present"
-	purge_rules:
+	purge_ip_permissions:
 	    description:
-	    	- Purge existing rules on security group that are not found in rules
+	    	- Purge existing ip permissions that are not found in ip permissions
 	    required: false
 	    default: 'true'
 '''
@@ -592,9 +592,9 @@ def revoke_security_group(module, result, security_group_info):
 	if revoke_rules_size == 0:
 		return (result, security_group_info)
 
-	goal_rules_size    = len(goal_ip_permissions)
-	purge_rules        = module.params.get('purge_rules')
-	if goal_rules_size == 0 and not purge_rules:
+	# prevent revoke
+	purge_ip_permissions = module.params.get('purge_ip_permissions')
+	if not purge_ip_permissions:
 		return (result, security_group_info)
 
 	# build parameters
@@ -683,17 +683,17 @@ def run(module):
 def main():
 	module = AnsibleModule(
 		argument_spec = dict(
-			access_key        = dict(required=True,  type='str'),
-			secret_access_key = dict(required=True,  type='str',  no_log=True),
-			endpoint          = dict(required=True,  type='str'),
-			group_name        = dict(required=True,  type='str',  aliases=['name']),
-			description       = dict(required=False, type='str',  default=None),
-			availability_zone = dict(required=False, type='str',  default=None),
-			log_limit         = dict(required=False, type='int',  default=None),
-			log_filters       = dict(required=False, type='dict', default=dict()),
-			ip_permissions    = dict(required=False, type='list', default=list()),
-			state             = dict(required=False, type='str',  default='present', choices=['present']),
-			purge_rules       = dict(required=False, type='bool', default=True),
+			access_key           = dict(required=True,  type='str'),
+			secret_access_key    = dict(required=True,  type='str',  no_log=True),
+			endpoint             = dict(required=True,  type='str'),
+			group_name           = dict(required=True,  type='str',  aliases=['name']),
+			description          = dict(required=False, type='str',  default=None),
+			availability_zone    = dict(required=False, type='str',  default=None),
+			log_limit            = dict(required=False, type='int',  default=None),
+			log_filters          = dict(required=False, type='dict', default=dict()),
+			ip_permissions       = dict(required=False, type='list', default=list()),
+			state                = dict(required=False, type='str',  default='present', choices=['present']),
+			purge_ip_permissions = dict(required=False, type='bool', default=True),
 		)
 	)
 	run(module)

@@ -37,7 +37,7 @@ class TestNiftycloud(unittest.TestCase):
 				availability_zone    = 'west-11',
 				log_limit            = 100000,
 				state                = 'present',
-				purge_rules          = False,
+				purge_ip_permissions = True,
 				log_filters          = dict(
 					net_bios  = True,
 					broadcast = True,
@@ -1520,6 +1520,7 @@ class TestNiftycloud(unittest.TestCase):
 
 		mock_ip_permissions_removed = self.mockModule
 		mock_ip_permissions_removed.params['ip_permissions'] = []
+		mock_ip_permissions_removed.params['purge_ip_permissions'] = False
 
 		(result, info) = niftycloud_fw.revoke_security_group(
 			mock_ip_permissions_removed,
