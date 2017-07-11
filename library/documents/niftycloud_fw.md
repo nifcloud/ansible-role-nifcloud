@@ -37,9 +37,9 @@ Create or update, authorize, revoke a firewall group.
     module: pip
     name: requests
 
-- name: Regist server to load balancer
+- name: Regist server to firewall group
   local_action:
-    module: niftycloud
+    module: niftycloud_fw
     access_key: "YOUR ACCESS KEY"
     secret_access_key: "YOUR SECRET ACCESS KEY"
     endpoint: "west-1.cp.cloud.nifty.com"
