@@ -28,6 +28,7 @@ Create or update, authorize, revoke a firewall group.
 | log_filters          | no       | dict()     | dict |           |         | Options for restrain broadcast logs                                                               |
 | ip_permissions       | no       | list()     | list |           |         | List of rules that allows incoming or outgoing communication to resources                         |
 | state                | no       | "present"  | str  | "present" |         | Goal status                                                                                       |
+| purge_ip_permissions | no       | True       | bool |           |         | Purge existing ip permissions that are not found in ip permissions                                |
 
 ## Examples
 
