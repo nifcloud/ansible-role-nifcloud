@@ -17,7 +17,7 @@
 
 DOCUMENTATION = '''
 ---
-module: niftycloud_lan
+module: niftycloud_private_lan
 short_description: Create or modify, delete a private lan in NIFTY Cloud
 description:
 	- Create or modify, delete a private lan.
@@ -70,7 +70,7 @@ options:
 '''
 
 EXAMPLES = '''
-- action: niftycloud_lan access_key="YOUR_ACCESS_KEY" secret_access_key="YOUR_SECRET_ACCESS_KEY" endpoint="west-1.cp.cloud.nifty.com" private_lan_name="lan001"
+- action: niftycloud_private_lan access_key="YOUR_ACCESS_KEY" secret_access_key="YOUR_SECRET_ACCESS_KEY" endpoint="west-1.cp.cloud.nifty.com" private_lan_name="lan001"
 '''
 def calculate_signature(secret_access_key, method, endpoint, path, params):
 	payload = ""
@@ -518,4 +518,3 @@ import copy
 
 if __name__ == '__main__':
 	main()
-

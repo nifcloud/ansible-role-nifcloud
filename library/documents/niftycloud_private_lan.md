@@ -1,4 +1,4 @@
-# niftycloud_lan - Create or modify, delete a private lan in NIFTY Cloud
+# niftycloud_private_lan - Create or modify, delete a private lan in NIFTY Cloud
 
 * [Synopsis](#synopsis)
 * [Requirements](#requirements)
@@ -39,7 +39,7 @@ Create or update, delete a private lan.
 
 - name: Create private lan
   local_action:
-    module: niftycloud_lan
+    module: niftycloud_private_lan
     access_key: "YOUR ACCESS KEY"
     secret_access_key: "YOUR SECRET ACCESS KEY"
     endpoint: "west-1.cp.cloud.nifty.com"
