@@ -21,9 +21,9 @@ Create or update, delete a private lan.
 | access_key           | yes      |            | str  |                       | NIFTY Cloud API access key                            |
 | secret_access_key    | yes      |            | str  |                       | NIFTY Cloud API secret access key                     |
 | endpoint             | yes      |            | str  |                       | API endpoint of target region                         |
-| private_lan_name     | yes      |            | str  |                       | Target private lan name                               |
 | cidr_block           | yes      |            | str  |                       | CIDR of private lan                                   |
-| network_id           | no       |            | str  |                       | Network unique ID. Required when private lan modified |
+| private_lan_name     | no       |            | str  |                       | Target private lan name. Required private_lan_name or network_id. |
+| network_id           | no       |            | str  |                       | Network unique ID. Required private_lan_name or network_id.       |
 | accounting_type      | no       |            | str  |                       | Accounting type. (1: monthly, 2: pay per use)         |
 | description          | no       |            | str  |                       | Description of target private lan                     |
 | availability_zone    | no       |            | str  |                       | Availability zone                                     |

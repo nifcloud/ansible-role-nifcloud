@@ -142,7 +142,10 @@ def describe_private_lans(module, result):
 	private_lan_set = None
 
 	params = dict()
-	params['PrivateLanName.1']   = module.params['private_lan_name']
+	if module.params['network_id'] is not None:
+		params['NetworkId.1']   = module.params['network_id']
+	else:
+		params['PrivateLanName.1']   = module.params['private_lan_name']
 
 	res = request_to_api(module, 'GET', 'NiftyDescribePrivateLans', params)
 
@@ -497,8 +500,8 @@ def main():
 			access_key        = dict(required=True,  type='str'),
 			secret_access_key = dict(required=True,  type='str', no_log=True),
 			endpoint          = dict(required=True,  type='str'),
-			private_lan_name  = dict(required=True,  type='str', aliases=['name']),
 			cidr_block        = dict(required=True,  type='str', default=None),
+			private_lan_name  = dict(required=False, type='str', aliases=['name']),
 			network_id        = dict(required=False, type='str', default=None),
 			accounting_type   = dict(required=False, type='str', default=None),
 			description       = dict(required=False, type='str', default=None),
