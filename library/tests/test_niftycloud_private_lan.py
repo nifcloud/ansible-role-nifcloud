@@ -60,7 +60,7 @@ class TestNiftycloud(unittest.TestCase):
 			),
 		)
 
-		self.private_lan_set = dict(
+		self.private_lan_info = dict(
 			private_lan_name = 'lan001',
 			cidr_block       = '10.0.1.0/16',
 			network_id       = 'net-0r16fxs1',
@@ -138,7 +138,7 @@ class TestNiftycloud(unittest.TestCase):
 		self.mockDescribePrivateLan = mock.MagicMock(
 			return_value=(
 				self.result['present'],
-				self.private_lan_set,
+				self.private_lan_info,
 			))
 
 		self.mockRequestsError = mock.MagicMock(return_value=None)
@@ -187,13 +187,12 @@ class TestNiftycloud(unittest.TestCase):
 
 	# method get
 	def test_request_to_api_get(self):
-		method = 'GET'
 		action = 'NiftyDescribePrivateLans'
 		params = dict()
 		params["PrivateLanName.1"] = self.mockModule.params['private_lan_name']
 
 		with mock.patch('requests.get', self.mockRequestsGetNiftyDescribePrivateLans):
-			info = niftycloud_private_lan.request_to_api(self.mockModule, method, action, params)
+			info = niftycloud_private_lan.request_to_api_get(self.mockModule, action, params)
 
 		self.assertEqual(info['status'], 200)
 		self.assertEqual(info['xml_namespace'], dict(nc = self.xmlnamespace))
@@ -202,14 +201,13 @@ class TestNiftycloud(unittest.TestCase):
 
 	# method post
 	def test_request_to_api_post(self):
-		method = 'POST'
 		action = 'NiftyCreatePrivateLan'
 		params = dict(
 			PrivateLanName = self.mockModule.params['private_lan_name'],
 		)
 
 		with mock.patch('requests.post', self.mockRequestsPostNiftyCreatePrivateLan):
-			info = niftycloud_private_lan.request_to_api(self.mockModule, method, action, params)
+			info = niftycloud_private_lan.request_to_api_post(self.mockModule, action, params)
 
 		self.assertEqual(info['status'], 200)
 		self.assertEqual(info['xml_namespace'], dict(nc = self.xmlnamespace))
@@ -218,34 +216,19 @@ class TestNiftycloud(unittest.TestCase):
 
 	# api error
 	def test_request_to_api_error(self):
-		method = 'GET'
 		action = 'NiftyDescribePrivateLans'
 		params = dict()
 		params["PrivateLanName.1"] = self.mockModule.params['private_lan_name']
 
 		with mock.patch('requests.get', self.mockRequestsInternalServerError):
-			info = niftycloud_private_lan.request_to_api(self.mockModule, method, action, params)
+			info = niftycloud_private_lan.request_to_api_get(self.mockModule, action, params)
 
 		self.assertEqual(info['status'], 500)
 		self.assertEqual(etree.tostring(info['xml_body']),
 				 etree.tostring(etree.fromstring(self.xml['internalServerError'])))
 
-	# method failed
-	def test_request_to_api_unknown(self):
-		method = 'UNKNOWN'
-		action = 'NiftyDescribePrivateLans'
-		params = dict()
-		params["PrivateLanName.1"] = self.mockModule.params['private_lan_name']
-
-		self.assertRaises(
-			Exception,
-			niftycloud_private_lan.request_to_api,
-			(self.mockModule, method, action, params)
-		)
-
 	# network error
 	def test_request_to_api_request_error(self):
-		method = 'GET'
 		action = 'NiftyDescribePrivateLans'
 		params = dict()
 		params["PrivateLanName.1"] = self.mockModule.params['private_lan_name']
@@ -253,34 +236,22 @@ class TestNiftycloud(unittest.TestCase):
 		with mock.patch('requests.get', self.mockRequestsError):
 			self.assertRaises(
 				Exception,
-				niftycloud_private_lan.request_to_api,
-				(self.mockModule, method, action, params)
+				niftycloud_private_lan.request_to_api_get,
+				(self.mockModule, action, params)
 			)
 
 	# get api error code & message
 	def test_get_api_error(self):
-		method = 'GET'
 		action = 'NiftyDescribePrivateLans'
 		params = dict()
 		params["PrivateLanName.1"] = self.mockModule.params['private_lan_name']
 
 		with mock.patch('requests.get', self.mockRequestsInternalServerError):
-			info = niftycloud_private_lan.request_to_api(self.mockModule, method, action, params)
+			info = niftycloud_private_lan.request_to_api_get(self.mockModule, action, params)
 
 		error_info = niftycloud_private_lan.get_api_error(info['xml_body'])
 		self.assertEqual(error_info['code'],    'Server.InternalError')
 		self.assertEqual(error_info['message'], 'An error has occurred. Please try again later.')
-
-	# throw failed
-	def test_fail(self):
-		with self.assertRaises(Exception) as cm:
-			niftycloud_private_lan.fail(
-				self.mockModule,
-				self.result['absent'],
-				'error message',
-				private_lan_name = 'lan001'
-			)
-		self.assertEqual(cm.exception.message, 'failed')
 
 	# describe present
 	def test_describe_private_lans_present(self):
@@ -323,8 +294,7 @@ class TestNiftycloud(unittest.TestCase):
 			state              = 'present',
 		))
 		self.assertIsInstance(info, dict)
-		self.assertIsInstance(info['description'], str)
-		self.assertEqual(info['description'], '')
+		self.assertEqual(info['description'], None)
 
 	# describe pending
 	def test_describe_private_lans_pending(self):
@@ -346,9 +316,8 @@ class TestNiftycloud(unittest.TestCase):
 		self.assertEqual(result, dict(
 			created            = False,
 			changed_attributes = dict(),
-			state              = 'absent',
+			state              = 'present',
 		))
-		self.assertIsNone(info)
 
 	# describe failed
 	def test_describe_private_lans_failed(self):
@@ -362,35 +331,35 @@ class TestNiftycloud(unittest.TestCase):
 		))
 		self.assertIsNone(info)
 
-	# wait_for_pending success absent
-	def test_wait_for_pending_success_absent(self):
+	# wait_for_state success absent
+	def test_wait_for_state_success_absent(self):
 		with mock.patch('niftycloud_private_lan.describe_private_lans', self.mockNotFoundPrivateLan):
-			(result, info) = niftycloud_private_lan.wait_for_pending(self.mockModule, self.result['absent'], 'absent')
+			(result, info) = niftycloud_private_lan.wait_for_state(self.mockModule, self.result['absent'], 'absent')
 
 		self.assertEqual(result, self.result['absent'])
 		self.assertIsNone(info)
 
-	# wait_for_pending success present
-	def test_wait_for_pending_success_present(self):
+	# wait_for_state success present
+	def test_wait_for_state_success_present(self):
 		with mock.patch('niftycloud_private_lan.describe_private_lans', self.mockDescribePrivateLan):
-			(result, info) = niftycloud_private_lan.wait_for_pending(self.mockModule, self.result['absent'], 'present')
+			(result, info) = niftycloud_private_lan.wait_for_state(self.mockModule, self.result['absent'], 'present')
 
 		self.assertEqual(result, self.result['present'])
-		self.assertEqual(info,   self.private_lan_set)
+		self.assertEqual(info,   self.private_lan_info)
 
-	# wait_for_pending unmatch absent
-	def test_wait_for_pending_failed_absent(self):
+	# wait_for_state unmatch absent
+	def test_wait_for_state_failed_absent(self):
 		with mock.patch('niftycloud_private_lan.describe_private_lans', self.mockDescribePrivateLan):
 			with self.assertRaises(Exception) as cm:
-				(result, info) = niftycloud_private_lan.wait_for_pending(self.mockModule, self.result['absent'], 'absent')
+				(result, info) = niftycloud_private_lan.wait_for_state(self.mockModule, self.result['absent'], 'absent')
 
 		self.assertEqual(cm.exception.message, 'failed')
 
-	# wait_for_pending unmatch present
-	def test_wait_for_pending_failed_present(self):
+	# wait_for_state unmatch present
+	def test_wait_for_state_failed_present(self):
 		with mock.patch('niftycloud_private_lan.describe_private_lans', self.mockNotFoundPrivateLan):
 			with self.assertRaises(Exception) as cm:
-				(result, info) = niftycloud_private_lan.wait_for_pending(self.mockModule, self.result['absent'], 'present')
+				(result, info) = niftycloud_private_lan.wait_for_state(self.mockModule, self.result['absent'], 'present')
 
 		self.assertEqual(cm.exception.message, 'failed')
 
@@ -399,11 +368,11 @@ class TestNiftycloud(unittest.TestCase):
 		(result, info) = niftycloud_private_lan.create_private_lan(
 			self.mockModule,
 			self.result['present'],
-			self.private_lan_set
+			self.private_lan_info
 		)
 
 		self.assertEqual(result, self.result['present'])
-		self.assertEqual(info,   self.private_lan_set)
+		self.assertEqual(info,   self.private_lan_info)
 
 	# create success
 	def test_create_private_lan_success(self):
@@ -420,7 +389,7 @@ class TestNiftycloud(unittest.TestCase):
 			changed_attributes = dict(),
 			state              = 'present',
 		))
-		self.assertEqual(info, self.private_lan_set)
+		self.assertEqual(info, self.private_lan_info)
 
 	# create failed
 	def test_create_private_lan_failed(self):
@@ -458,11 +427,11 @@ class TestNiftycloud(unittest.TestCase):
 				(result, info) = niftycloud_private_lan.modify_private_lan_attribute(
 					self.mockModule,
 					self.result['present'],
-					self.private_lan_set,
+					self.private_lan_info,
 					params
 				)
 		self.assertEqual(result, self.result['present'])
-		self.assertEqual(info, self.private_lan_set)
+		self.assertEqual(info, self.private_lan_info)
 
 	# modify api absent  * do nothing
 	def test_modify_private_lan_attribute_absent(self):
@@ -496,7 +465,7 @@ class TestNiftycloud(unittest.TestCase):
 					(result, info) = niftycloud_private_lan.modify_private_lan_attribute(
 						self.mockModule,
 						self.result['present'],
-						self.private_lan_set,
+						self.private_lan_info,
 						params
 					)
 		self.assertEqual(cm.exception.message, 'failed')
@@ -514,28 +483,28 @@ class TestNiftycloud(unittest.TestCase):
 				(result, info) = niftycloud_private_lan.modify_private_lan_attribute(
 					self.mockModule,
 					self.result['present'],
-					self.private_lan_set,
+					self.private_lan_info,
 					params
 				)
 		self.assertEqual(cm.exception.message, 'failed')
 
 	# modify description success
 	def test_modify_private_lan_description_success(self):
-		changed_private_lan_set = dict(
-			copy.deepcopy(self.private_lan_set),
+		changed_private_lan_info = dict(
+			copy.deepcopy(self.private_lan_info),
 			description = self.mockModule.params['description'],
 		)
 		mock_describe_private_lan = mock.MagicMock(
 			return_value=(
 				self.result['present'],
-				changed_private_lan_set,
+				changed_private_lan_info,
 			))
 
 		with mock.patch('niftycloud_private_lan.modify_private_lan_attribute', mock_describe_private_lan):
 			(result, info) = niftycloud_private_lan.modify_private_lan_description(
 				self.mockModule,
 				self.result['present'],
-				self.private_lan_set
+				self.private_lan_info
 			)
 
 		self.assertEqual(result, dict(
@@ -545,7 +514,7 @@ class TestNiftycloud(unittest.TestCase):
 			),
 			state = 'present',
 		))
-		self.assertEqual(info, changed_private_lan_set)
+		self.assertEqual(info, changed_private_lan_info)
 
 	# modify description absent  * do nothing
 	def test_modify_private_lan_description_absent(self):
@@ -560,8 +529,8 @@ class TestNiftycloud(unittest.TestCase):
 
 	# modify description is None  * do nothing
 	def test_modify_private_lan_description_none(self):
-		private_lan_set = dict(
-			copy.deepcopy(self.private_lan_set),
+		private_lan_info = dict(
+			copy.deepcopy(self.private_lan_info),
 			description = self.mockModule.params['description'],
 		)
 		mock_module = mock.MagicMock(
@@ -574,27 +543,27 @@ class TestNiftycloud(unittest.TestCase):
 		(result, info) = niftycloud_private_lan.modify_private_lan_description(
 			self.mockModule,
 			self.result['present'],
-			private_lan_set
+			private_lan_info
 		)
 
 		self.assertEqual(result, self.result['present'])
-		self.assertEqual(info, private_lan_set)
+		self.assertEqual(info, private_lan_info)
 
 	# modify description is no change  * do nothing
 	def test_modify_private_lan_description_skip(self):
-		changed_private_lan_set = dict(
-			copy.deepcopy(self.private_lan_set),
+		changed_private_lan_info = dict(
+			copy.deepcopy(self.private_lan_info),
 			description = self.mockModule.params['description'],
 		)
 
 		(result, info) = niftycloud_private_lan.modify_private_lan_description(
 			self.mockModule,
 			self.result['present'],
-			changed_private_lan_set
+			changed_private_lan_info
 		)
 
 		self.assertEqual(result, self.result['present'])
-		self.assertEqual(info, changed_private_lan_set)
+		self.assertEqual(info, changed_private_lan_info)
 
 	# modify description failed
 	def test_modify_private_lan_description_failed(self):
@@ -603,20 +572,20 @@ class TestNiftycloud(unittest.TestCase):
 				(result, info) = niftycloud_private_lan.modify_private_lan_description(
 					self.mockModule,
 					self.result['present'],
-					self.private_lan_set
+					self.private_lan_info
 				)
 		self.assertEqual(cm.exception.message, 'failed')
 
 	# modify private lan name success
 	def test_modify_private_lan_name_success(self):
-		changed_private_lan_set = dict(
-			copy.deepcopy(self.private_lan_set),
+		changed_private_lan_info = dict(
+			copy.deepcopy(self.private_lan_info),
 			private_lan_name = 'lan002',
 		)
 		mack_describe = mock.MagicMock(
 			return_value=(
 				self.result['present'],
-				changed_private_lan_set,
+				changed_private_lan_info,
 			))
 		mock_module = self.mockModule
 		mock_module.params['private_lan_name'] = 'lan002'
@@ -625,7 +594,7 @@ class TestNiftycloud(unittest.TestCase):
 			(result, info) = niftycloud_private_lan.modify_private_lan_name(
 				mock_module,
 				self.result['present'],
-				self.private_lan_set
+				self.private_lan_info
 			)
 
 		self.assertEqual(result, dict(
@@ -635,7 +604,7 @@ class TestNiftycloud(unittest.TestCase):
 			),
 			state = 'present',
 		))
-		self.assertEqual(info, changed_private_lan_set)
+		self.assertEqual(info, changed_private_lan_info)
 
 	# modify private lan name absent  * do nothing
 	def test_modify_private_lan_name_absent(self):
@@ -650,8 +619,8 @@ class TestNiftycloud(unittest.TestCase):
 
 	# modify private lan name is None  * do nothing
 	def test_modify_private_lan_name_none(self):
-		private_lan_set = dict(
-			copy.deepcopy(self.private_lan_set),
+		private_lan_info = dict(
+			copy.deepcopy(self.private_lan_info),
 			private_lan_name = self.mockModule.params['private_lan_name'],
 		)
 		mock_module = mock.MagicMock(
@@ -664,32 +633,32 @@ class TestNiftycloud(unittest.TestCase):
 		(result, info) = niftycloud_private_lan.modify_private_lan_name(
 			self.mockModule,
 			self.result['present'],
-			private_lan_set
+			private_lan_info
 		)
 
 		self.assertEqual(result, self.result['present'])
-		self.assertEqual(info, private_lan_set)
+		self.assertEqual(info, private_lan_info)
 
 	# modify private lan name is no change  * do nothing
 	def test_modify_private_lan_name_skip(self):
-		changed_private_lan_set = dict(
-			copy.deepcopy(self.private_lan_set),
+		changed_private_lan_info = dict(
+			copy.deepcopy(self.private_lan_info),
 			private_lan_name = self.mockModule.params['private_lan_name'],
 		)
 
 		(result, info) = niftycloud_private_lan.modify_private_lan_name(
 			self.mockModule,
 			self.result['present'],
-			changed_private_lan_set
+			changed_private_lan_info
 		)
 
 		self.assertEqual(result, self.result['present'])
-		self.assertEqual(info, changed_private_lan_set)
+		self.assertEqual(info, changed_private_lan_info)
 
 	# modify private lan name failed
 	def test_modify_private_lan_name_failed(self):
-		changed_private_lan_set = dict(
-			copy.deepcopy(self.private_lan_set),
+		changed_private_lan_info = dict(
+			copy.deepcopy(self.private_lan_info),
 			private_lan_name = 'lan002',
 		)
 		mock_module = self.mockModule
@@ -699,28 +668,28 @@ class TestNiftycloud(unittest.TestCase):
 				(result, info) = niftycloud_private_lan.modify_private_lan_name(
 					mock_module,
 					self.result['present'],
-					self.private_lan_set
+					self.private_lan_info
 				)
 		self.assertEqual(cm.exception.message, 'failed')
 
 
 	# modify cidr_block success
 	def test_modify_private_lan_cidr_block_success(self):
-		changed_private_lan_set = dict(
-			copy.deepcopy(self.private_lan_set),
+		changed_private_lan_info = dict(
+			copy.deepcopy(self.private_lan_info),
 			cidr_block = self.mockModule.params['cidr_block'],
 		)
 		mock_describe_private_lan = mock.MagicMock(
 			return_value=(
 				self.result['present'],
-				changed_private_lan_set,
+				changed_private_lan_info,
 			))
 
 		with mock.patch('niftycloud_private_lan.modify_private_lan_attribute', mock_describe_private_lan):
 			(result, info) = niftycloud_private_lan.modify_private_lan_cidr_block(
 				self.mockModule,
 				self.result['present'],
-				self.private_lan_set
+				self.private_lan_info
 			)
 
 		self.assertEqual(result, dict(
@@ -730,7 +699,7 @@ class TestNiftycloud(unittest.TestCase):
 			),
 			state = 'present',
 		))
-		self.assertEqual(info, changed_private_lan_set)
+		self.assertEqual(info, changed_private_lan_info)
 
 	# modify cidr_block absent  * do nothing
 	def test_modify_private_lan_cidr_block_absent(self):
@@ -745,8 +714,8 @@ class TestNiftycloud(unittest.TestCase):
 
 	# modify cidr_block is None  * do nothing
 	def test_modify_private_lan_cidr_block_none(self):
-		private_lan_set = dict(
-			copy.deepcopy(self.private_lan_set),
+		private_lan_info = dict(
+			copy.deepcopy(self.private_lan_info),
 			cidr_block = self.mockModule.params['cidr_block'],
 		)
 		mock_module = mock.MagicMock(
@@ -759,27 +728,27 @@ class TestNiftycloud(unittest.TestCase):
 		(result, info) = niftycloud_private_lan.modify_private_lan_cidr_block(
 			self.mockModule,
 			self.result['present'],
-			private_lan_set
+			private_lan_info
 		)
 
 		self.assertEqual(result, self.result['present'])
-		self.assertEqual(info, private_lan_set)
+		self.assertEqual(info, private_lan_info)
 
 	# modify cidr_block is no change  * do nothing
 	def test_modify_private_lan_cidr_block_skip(self):
-		changed_private_lan_set = dict(
-			copy.deepcopy(self.private_lan_set),
+		changed_private_lan_info = dict(
+			copy.deepcopy(self.private_lan_info),
 			cidr_block = self.mockModule.params['cidr_block'],
 		)
 
 		(result, info) = niftycloud_private_lan.modify_private_lan_cidr_block(
 			self.mockModule,
 			self.result['present'],
-			changed_private_lan_set
+			changed_private_lan_info
 		)
 
 		self.assertEqual(result, self.result['present'])
-		self.assertEqual(info, changed_private_lan_set)
+		self.assertEqual(info, changed_private_lan_info)
 
 	# modify cidr_block failed
 	def test_modify_private_lan_cidr_block_failed(self):
@@ -788,27 +757,27 @@ class TestNiftycloud(unittest.TestCase):
 				(result, info) = niftycloud_private_lan.modify_private_lan_cidr_block(
 					self.mockModule,
 					self.result['present'],
-					self.private_lan_set
+					self.private_lan_info
 				)
 		self.assertEqual(cm.exception.message, 'failed')
 
 	# modify accounting_type success
 	def test_modify_private_lan_accounting_type_success(self):
-		changed_private_lan_set = dict(
-			copy.deepcopy(self.private_lan_set),
+		changed_private_lan_info = dict(
+			copy.deepcopy(self.private_lan_info),
 			accounting_type = self.mockModule.params['accounting_type'],
 		)
 		mock_describe_private_lan = mock.MagicMock(
 			return_value=(
 				self.result['present'],
-				changed_private_lan_set,
+				changed_private_lan_info,
 			))
 
 		with mock.patch('niftycloud_private_lan.modify_private_lan_attribute', mock_describe_private_lan):
 			(result, info) = niftycloud_private_lan.modify_private_lan_accounting_type(
 				self.mockModule,
 				self.result['present'],
-				self.private_lan_set
+				self.private_lan_info
 			)
 
 		self.assertEqual(result, dict(
@@ -818,7 +787,7 @@ class TestNiftycloud(unittest.TestCase):
 			),
 			state = 'present',
 		))
-		self.assertEqual(info, changed_private_lan_set)
+		self.assertEqual(info, changed_private_lan_info)
 
 	# modify accounting_type absent  * do nothing
 	def test_modify_private_lan_accounting_type_absent(self):
@@ -833,8 +802,8 @@ class TestNiftycloud(unittest.TestCase):
 
 	# modify accounting_type is None  * do nothing
 	def test_modify_private_lan_accounting_type_none(self):
-		private_lan_set = dict(
-			copy.deepcopy(self.private_lan_set),
+		private_lan_info = dict(
+			copy.deepcopy(self.private_lan_info),
 			accounting_type = self.mockModule.params['accounting_type'],
 		)
 		mock_module = mock.MagicMock(
@@ -847,27 +816,27 @@ class TestNiftycloud(unittest.TestCase):
 		(result, info) = niftycloud_private_lan.modify_private_lan_accounting_type(
 			self.mockModule,
 			self.result['present'],
-			private_lan_set
+			private_lan_info
 		)
 
 		self.assertEqual(result, self.result['present'])
-		self.assertEqual(info, private_lan_set)
+		self.assertEqual(info, private_lan_info)
 
 	# modify accounting_type is no change  * do nothing
 	def test_modify_private_lan_accounting_type_skip(self):
-		changed_private_lan_set = dict(
-			copy.deepcopy(self.private_lan_set),
+		changed_private_lan_info = dict(
+			copy.deepcopy(self.private_lan_info),
 			accounting_type = self.mockModule.params['accounting_type'],
 		)
 
 		(result, info) = niftycloud_private_lan.modify_private_lan_accounting_type(
 			self.mockModule,
 			self.result['present'],
-			changed_private_lan_set
+			changed_private_lan_info
 		)
 
 		self.assertEqual(result, self.result['present'])
-		self.assertEqual(info, changed_private_lan_set)
+		self.assertEqual(info, changed_private_lan_info)
 
 	# modify accounting_type failed
 	def test_modify_private_lan_accounting_type_failed(self):
@@ -876,7 +845,7 @@ class TestNiftycloud(unittest.TestCase):
 				(result, info) = niftycloud_private_lan.modify_private_lan_accounting_type(
 					self.mockModule,
 					self.result['present'],
-					self.private_lan_set
+					self.private_lan_info
 				)
 		self.assertEqual(cm.exception.message, 'failed')
 
@@ -889,11 +858,11 @@ class TestNiftycloud(unittest.TestCase):
 						(result, info) = niftycloud_private_lan.modify_private_lan(
 							self.mockModule,
 							self.result['present'],
-							self.private_lan_set
+							self.private_lan_info
 						)
 
 		self.assertEqual(result, self.result['present'])
-		self.assertEqual(info, self.private_lan_set)
+		self.assertEqual(info, self.private_lan_info)
 
 	# modify absent  * do nothing
 	def test_modify_private_lan_absent(self):
@@ -909,27 +878,27 @@ class TestNiftycloud(unittest.TestCase):
 	# delete success
 	def test_delete_private_lan_success(self):
 
-		private_lan_set = dict(
-			copy.deepcopy(self.private_lan_set),
+		private_lan_info = dict(
+			copy.deepcopy(self.private_lan_info),
 		)
-		mock_private_lan_set = mock.MagicMock(
+		mock_private_lan_info = mock.MagicMock(
 			return_value=(
 				self.result['absent'],
-				self.private_lan_set
+				self.private_lan_info
 			))
 
 		with mock.patch('requests.post', self.mockRequestsPostDeletePrivateLan):
-			with mock.patch('niftycloud_private_lan.describe_private_lans', mock_private_lan_set):
+			with mock.patch('niftycloud_private_lan.describe_private_lans', mock_private_lan_info):
 				(result, info) = niftycloud_private_lan.delete_private_lan(
 					self.mockModule,
 					self.result['present'],
-					private_lan_set
+					private_lan_info
 				)
 
 		self.assertEqual(result, dict(
 			created = False,
 			changed_attributes = dict(
-				private_lan_name = self.private_lan_set['private_lan_name'],
+				private_lan_name = self.private_lan_info['private_lan_name'],
 			),
 			state = 'absent',
 		))
@@ -953,7 +922,7 @@ class TestNiftycloud(unittest.TestCase):
 					niftycloud_private_lan.delete_private_lan(
 						self.mockModule,
 						self.result['present'],
-						self.private_lan_set
+						self.private_lan_info
 					)
 		self.assertEqual(cm.exception.message, 'failed')
 
@@ -964,7 +933,7 @@ class TestNiftycloud(unittest.TestCase):
 				(result, info) = niftycloud_private_lan.delete_private_lan(
 					self.mockModule,
 					self.result['present'],
-					self.private_lan_set
+					self.private_lan_info
 				)
 		self.assertEqual(cm.exception.message, 'failed')
 
@@ -1103,3 +1072,4 @@ niftycloud_api_response_sample = dict(
 
 if __name__ == '__main__':
 	unittest.main()
+

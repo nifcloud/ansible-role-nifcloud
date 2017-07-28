@@ -72,49 +72,73 @@ options:
 EXAMPLES = '''
 - action: niftycloud_private_lan access_key="YOUR_ACCESS_KEY" secret_access_key="YOUR_SECRET_ACCESS_KEY" endpoint="west-1.cp.cloud.nifty.com" private_lan_name="lan001"
 '''
-def calculate_signature(secret_access_key, method, endpoint, path, params):
-	payload = ""
+STATUS_ABSENT  = 'absent'
+STATUS_PENDING = 'pending'
+STATUS_PRESENT = 'present'
+
+API_ACTION_DESCRIVE = 'NiftyDescribePrivateLans'
+API_ACTION_CREATE   = 'NiftyCreatePrivateLan'
+API_ACTION_MODIFY   = 'NiftyModifyPrivateLanAttribute'
+API_ACTION_DELETE   = 'NiftyDeletePrivateLan'
+
+def get_query_string(params):
+	query_string = ""
 	for v in sorted(params.items()):
-		payload += '&{0}={1}'.format(v[0], urllib.quote(str(v[1]), ''))
-	payload = payload[1:]
+		query_string += '&{0}={1}'.format(v[0], urllib.quote(str(v[1]), ''))
+	return query_string[1:]
 
-	string_to_sign = [method, endpoint, path, payload]
-	digest = hmac.new(secret_access_key, '\n'.join(string_to_sign), hashlib.sha256).digest()
+def get_string_to_sign(method, endpoint, path, query_string):
+	return method + '\n' + endpoint + '\n' + path + '\n' + query_string
 
-	return base64.b64encode(digest)
+def calculate_signature(secret_access_key, method, endpoint, path, params):
+	query_string   = get_query_string(params)
+	string_to_sign = get_string_to_sign(method, endpoint, path, query_string)
+	hash_msg       = hmac.new(secret_access_key, string_to_sign, hashlib.sha256)
+	return base64.b64encode(hash_msg.digest())
 
-def request_to_api(module, method, action, params):
+def create_request_params(module, endpoint, method, path, action, params):
 	params['Action']           = action
 	params['AccessKeyId']      = module.params['access_key']
 	params['SignatureMethod']  = 'HmacSHA256'
 	params['SignatureVersion'] = '2'
 
-	path     = '/api/'
+	secret_access_key   = module.params['secret_access_key']
+	singnature          = calculate_signature(secret_access_key, method, endpoint, path, params)
+	params['Signature'] = singnature
+	return params
+
+def change_responce_to_dict(res):
+	try:
+		body = res.text.encode('utf-8')
+		xml  = etree.fromstring(body)
+		namespace = dict(nc = xml.tag[1:].split('}')[0])
+	except:
+		module.fail_json(status=-1, msg='changes failed (xml parse error)')
+
+	info = dict(
+		status   = res.status_code,
+		xml_body = xml,
+		xml_namespace = namespace
+	)
+	return info
+
+def request_to_api_get(module, action, params):
 	endpoint = module.params['endpoint']
+	method   = 'GET'
+	path     = '/api/'
+	params   = create_request_params(module, endpoint, method, path, action, params)
+	url      = 'https://{0}{1}?{2}'.format(endpoint, path, urllib.urlencode(params))
+	res      = requests.get(url)
+	return change_responce_to_dict(res)
 
-	params['Signature'] = calculate_signature(module.params['secret_access_key'], method, endpoint, path, params)
-
-	r = None
-	if method == 'GET':
-		url = 'https://{0}{1}?{2}'.format(endpoint, path, urllib.urlencode(params))
-		r = requests.get(url)
-	elif method == 'POST':
-		url = 'https://{0}{1}'.format(endpoint, path)
-		r = requests.post(url, urllib.urlencode(params))
-	else:
-		module.fail_json(status=-1, msg='changes failed (un-supported http method)')
-
-	if r is not None:
-		body = r.text.encode('utf-8')
-		xml = etree.fromstring(body)
-		info = dict(
-			status   = r.status_code,
-			xml_body = xml,
-			xml_namespace = dict(nc = xml.tag[1:].split('}')[0])
-		)
-		return info
-	else:
-		module.fail_json(status=-1, msg='changes failed (http request failed)')
+def request_to_api_post(module, action, params):
+	endpoint = module.params['endpoint']
+	method   = 'POST'
+	path     = '/api/'
+	params   = create_request_params(module, endpoint, method, path, action, params)
+	url      = 'https://{0}{1}'.format(endpoint, path)
+	res      = requests.post(url, urllib.urlencode(params))
+	return change_responce_to_dict(res)
 
 def get_api_error(xml_body):
 	info = dict(
@@ -123,102 +147,82 @@ def get_api_error(xml_body):
 	)
 	return info
 
-def fail(module, result, msg, **args):
-	current_state      = result.get('state')
-	created            = result.get('created')
-	changed_attributes = result.get('changed_attributes')
-
-	module.fail_json(
-		status             = -1,
-		msg                = msg,
-		current_state      = current_state,
-		created            = created,
-		changed_attributes = changed_attributes,
-		**args
-	)
+def get_xml_element(res, tag_name):
+	element = res['xml_body'].find(('.//{{{nc}}}' + tag_name).format(**res['xml_namespace']))
+	if element is None:
+		return ''
+	else:
+		return element.text
 
 def describe_private_lans(module, result):
-	result              = copy.deepcopy(result)
-	private_lan_set = None
+	result           = copy.deepcopy(result)
+	private_lan_info = None
 
 	params = dict()
 	if module.params['network_id'] is not None:
-		params['NetworkId.1']   = module.params['network_id']
+		params['NetworkId.1'] = module.params['network_id']
 	else:
-		params['PrivateLanName.1']   = module.params['private_lan_name']
+		params['PrivateLanName.1'] = module.params['private_lan_name']
 
-	res = request_to_api(module, 'GET', 'NiftyDescribePrivateLans', params)
+	res = request_to_api_get(module, API_ACTION_DESCRIVE, params)
 
-	# get xml element by python 2.6 and 2.7 or more
-	# don't use xml.etree.ElementTree.Element.fint(match, namespaces)
-	# this is not inplemented by python 2.6
-	status = res['xml_body'].find('.//{{{nc}}}state'.format(**res['xml_namespace']))
+	status = get_xml_element(res, 'state')
 
 	if res['status'] != 200 or status is None:
-		result['state'] = 'absent'
-	elif status.text != 'available':
-		result['state'] = 'pending'
+		result['state'] = STATUS_ABSENT
+	elif status == 'pending':
+		result['state'] = STATUS_PENDING
 	else:
-		result['state'] = 'present'
+		result['state'] = STATUS_PRESENT
 
-		# get xml element by python 2.6 and 2.7 or more
-		# don't use xml.etree.ElementTree.Element.fint(match, namespaces)
-		# this is not inplemented by python 2.6
-		private_lan_name  = res['xml_body'].find('.//{{{nc}}}privateLanName'.format(**res['xml_namespace']))
-		cidr_block        = res['xml_body'].find('.//{{{nc}}}cidrBlock'.format(**res['xml_namespace']))
-		network_id        = res['xml_body'].find('.//{{{nc}}}networkId'.format(**res['xml_namespace']))
-		availability_zone = res['xml_body'].find('.//{{{nc}}}availabilityZone'.format(**res['xml_namespace']))
-		accounting_type   = res['xml_body'].find('.//{{{nc}}}accountingType'.format(**res['xml_namespace']))
-		description       = res['xml_body'].find('.//{{{nc}}}description'.format(**res['xml_namespace']))
+		private_lan_name  = get_xml_element(res, 'privateLanName')
+		cidr_block        = get_xml_element(res, 'cidrBlock')
+		network_id        = get_xml_element(res, 'networkId')
+		availability_zone = get_xml_element(res, 'availabilityZone')
+		accounting_type   = get_xml_element(res, 'accountingType')
+		description       = get_xml_element(res, 'description')
 
-		# set description
-		if description is None or description.text is None:
-			description = ''
-		elif isinstance(description.text, unicode):
-			description = description.text.encode('utf-8')
-		else:
-			description = description.text
+		if isinstance(description, unicode):
+			description = description.encode('utf-8')
 
-		private_lan_set = dict(
-			private_lan_name  = private_lan_name.text,
-			cidr_block        = cidr_block.text,
-			network_id        = network_id.text,
-			availability_zone = availability_zone.text,
-			accounting_type   = accounting_type.text,
+		private_lan_info = dict(
+			private_lan_name  = private_lan_name,
+			cidr_block        = cidr_block,
+			network_id        = network_id,
+			availability_zone = availability_zone,
+			accounting_type   = accounting_type,
 			description       = description,
 		)
 
-	return(result, private_lan_set)
+	return(result, private_lan_info)
 
-def wait_for_pending(module, result, goal_state):
+def wait_for_state(module, result, state):
 	current_method_name = sys._getframe().f_code.co_name
 	private_lan_name    = module.params['private_lan_name']
 
 	for retry_count in range(10):
-		(result, private_lan_set) = describe_private_lans(module, result)
+		(result, private_lan_info) = describe_private_lans(module, result)
 		current_state = result.get('state')
-		if current_state == goal_state:
+		if current_state == state:
 			break
 		else:
 			time.sleep(10)
 
-	if current_state != goal_state:
-		module.fail_json(module, result, 'wait fot pending failed',
+	if current_state != state:
+		module.fail_json(module, result, 'wait fot state failed',
 			current_method   = current_method_name,
 			private_lan_name = private_lan_name
 		)
 
-	return (result, private_lan_set)
+	return (result, private_lan_info)
 
-def create_private_lan(module, result, private_lan_set):
-	result          = copy.deepcopy(result)
-	private_lan_set = copy.deepcopy(private_lan_set)
-	if private_lan_set is not None:
-		return (result, private_lan_set)
+def create_private_lan(module, result, private_lan_info):
+	result           = copy.deepcopy(result)
+	private_lan_info = copy.deepcopy(private_lan_info)
+	if private_lan_info is not None:
+		return (result, private_lan_info)
 
-	current_method_name = sys._getframe().f_code.co_name
-	goal_state          = 'present'
-	private_lan_name    = module.params['private_lan_name']
+	private_lan_name = module.params['private_lan_name']
 
 	params = dict(
 		PrivateLanName = private_lan_name,
@@ -227,13 +231,14 @@ def create_private_lan(module, result, private_lan_set):
 	)
 
 	if module.params.get('availability_zone') is not None:
-		params['AvailabilityZone']   = module.params['availability_zone']
+		params['AvailabilityZone'] = module.params['availability_zone']
 
 	if module.params.get('accounting_type') is not None:
-		params['AccountingType']   = module.params['accounting_type']
+		params['AccountingType'] = module.params['accounting_type']
 
-	res = request_to_api(module, 'GET', 'NiftyCreatePrivateLan', params)
-	if res['status'] != 200:
+	res = request_to_api_get(module, API_ACTION_CREATE, params)
+	if res['status'] >= 300:
+		current_method_name = sys._getframe().f_code.co_name
 		error_info = get_api_error(res['xml_body'])
 		module.fail_json(module, result, 'changes failed',
 			current_method   = current_method_name,
@@ -241,24 +246,23 @@ def create_private_lan(module, result, private_lan_set):
 			**error_info
 		)
 
-	# wait for pending
-	(result, private_lan_set) = wait_for_pending(module, result, goal_state)
+	state = STATUS_PRESENT
+	(result, private_lan_info) = wait_for_state(module, result, state)
 
 	result['created'] = True
-	return (result, private_lan_set)
+	return (result, private_lan_info)
 
-def modify_private_lan_attribute(module, result, private_lan_set, params):
+def modify_private_lan_attribute(module, result, private_lan_info, params):
 	result           = copy.deepcopy(result)
-	private_lan_set = copy.deepcopy(private_lan_set)
-	if private_lan_set is None:
-		return (result, private_lan_set)
+	private_lan_info = copy.deepcopy(private_lan_info)
+	if private_lan_info is None:
+		return (result, private_lan_info)
 
-	current_method_name = sys._getframe().f_code.co_name
-	goal_state          = 'present'
-	private_lan_name    = module.params['private_lan_name']
+	private_lan_name = module.params['private_lan_name']
 
-	res = request_to_api(module, 'POST', 'NiftyModifyPrivateLanAttribute', params)
-	if res['status'] != 200:
+	res = request_to_api_post(module, API_ACTION_MODIFY, params)
+	if res['status'] >= 300:
+		current_method_name = sys._getframe().f_code.co_name
 		error_info = get_api_error(res['xml_body'])
 		module.fail_json(module, result, 'changes failed',
 			current_method   = current_method_name,
@@ -266,188 +270,173 @@ def modify_private_lan_attribute(module, result, private_lan_set, params):
 			**error_info
 		)
 
-	# wait for pending
-	(result, private_lan_set) = wait_for_pending(module, result, goal_state)
+	state = STATUS_PRESENT
+	(result, private_lan_info) = wait_for_state(module, result, state)
 
-	return (result, private_lan_set)
+	return (result, private_lan_info)
 
-def modify_private_lan_name(module, result, private_lan_set):
-	result          = copy.deepcopy(result)
-	private_lan_set = copy.deepcopy(private_lan_set)
-	if private_lan_set is None:
-		return (result, private_lan_set)
+def modify_private_lan_name(module, result, private_lan_info):
+	result           = copy.deepcopy(result)
+	private_lan_info = copy.deepcopy(private_lan_info)
+	if private_lan_info is None:
+		return (result, private_lan_info)
 
-	current_method_name = sys._getframe().f_code.co_name
-	network_id          = private_lan_set.get('network_id')
+	network_id = private_lan_info.get('network_id')
 
-	# skip check
-	current_private_lan_name = private_lan_set.get('private_lan_name')
+	current_private_lan_name = private_lan_info.get('private_lan_name')
 	goal_private_lan_name    = module.params.get('private_lan_name')
 	if goal_private_lan_name is None or goal_private_lan_name == current_private_lan_name:
-		return (result, private_lan_set)
+		return (result, private_lan_info)
 
-	# update private lan Name
 	params = dict(
 		NetworkId = network_id,
 		Attribute = 'privateLanName',
 		Value     = goal_private_lan_name,
 	)
-	(result, private_lan_set) = modify_private_lan_attribute(module, result, private_lan_set, params)
+	(result, private_lan_info) = modify_private_lan_attribute(module, result, private_lan_info, params)
 
-	# update check
-	current_private_lan_name = private_lan_set.get('private_lan_name')
+	current_private_lan_name = private_lan_info.get('private_lan_name')
 	if goal_private_lan_name != current_private_lan_name:
+		current_method_name = sys._getframe().f_code.co_name
 		module.fail_json(module, result, 'changes failed',
 			current_method   = current_method_name,
 			private_lan_name = current_private_lan_name,
-			current_set      = private_lan_set,
+			current_set      = private_lan_info,
 		)
 
 	result['changed_attributes']['private_lan_name'] = goal_private_lan_name
-	return (result, private_lan_set)
+	return (result, private_lan_info)
 
-def modify_private_lan_cidr_block(module, result, private_lan_set):
+def modify_private_lan_cidr_block(module, result, private_lan_info):
 	result           = copy.deepcopy(result)
-	private_lan_set = copy.deepcopy(private_lan_set)
-	if private_lan_set is None:
-		return (result, private_lan_set)
+	private_lan_info = copy.deepcopy(private_lan_info)
+	if private_lan_info is None:
+		return (result, private_lan_info)
 
-	current_method_name = sys._getframe().f_code.co_name
-	private_lan_name    = module.params['private_lan_name']
-	network_id          = private_lan_set.get('network_id')
+	private_lan_name = module.params['private_lan_name']
+	network_id       = private_lan_info.get('network_id')
 
-	# skip check
-	current_cidr_block = private_lan_set.get('cidr_block')
+	current_cidr_block = private_lan_info.get('cidr_block')
 	goal_cidr_block    = module.params.get('cidr_block')
 	if goal_cidr_block is None or goal_cidr_block == current_cidr_block:
-		return (result, private_lan_set)
+		return (result, private_lan_info)
 
-	# update cidr block
 	params = dict(
 		NetworkId = network_id,
 		Attribute = 'cidrBlock',
 		Value = goal_cidr_block,
 	)
-	(result, private_lan_set) = modify_private_lan_attribute(module, result, private_lan_set, params)
+	(result, private_lan_info) = modify_private_lan_attribute(module, result, private_lan_info, params)
 
-	# update check
-	current_cidr_block = private_lan_set.get('cidr_block')
+	current_cidr_block = private_lan_info.get('cidr_block')
 	if goal_cidr_block != current_cidr_block:
+		current_method_name = sys._getframe().f_code.co_name
 		module.fail_json(module, result, 'changes failed',
 			current_method   = current_method_name,
 			private_lan_name = private_lan_name,
-			current_set      = private_lan_set,
+			current_set      = private_lan_info,
 		)
 
 	result['changed_attributes']['cidr_block'] = goal_cidr_block
-	return (result, private_lan_set)
+	return (result, private_lan_info)
 
-def modify_private_lan_accounting_type(module, result, private_lan_set):
+def modify_private_lan_accounting_type(module, result, private_lan_info):
 	result           = copy.deepcopy(result)
-	private_lan_set = copy.deepcopy(private_lan_set)
-	if private_lan_set is None:
-		return (result, private_lan_set)
+	private_lan_info = copy.deepcopy(private_lan_info)
+	if private_lan_info is None:
+		return (result, private_lan_info)
 
-	current_method_name = sys._getframe().f_code.co_name
-	private_lan_name    = module.params['private_lan_name']
-	network_id          = private_lan_set.get('network_id')
+	private_lan_name = module.params['private_lan_name']
+	network_id       = private_lan_info.get('network_id')
 
-	# skip check
-	current_accounting_type = private_lan_set.get('accounting_type')
+	current_accounting_type = private_lan_info.get('accounting_type')
 	goal_accounting_type    = module.params.get('accounting_type')
 	if goal_accounting_type is None or goal_accounting_type == current_accounting_type:
-		return (result, private_lan_set)
+		return (result, private_lan_info)
 
-	# update accounting type
 	params = dict(
 		NetworkId = network_id,
 		Attribute = 'accountingType',
 		Value = goal_accounting_type,
 	)
-	(result, private_lan_set) = modify_private_lan_attribute(module, result, private_lan_set, params)
+	(result, private_lan_info) = modify_private_lan_attribute(module, result, private_lan_info, params)
 
-	# update check
-	current_accounting_type = private_lan_set.get('accounting_type')
+	current_accounting_type = private_lan_info.get('accounting_type')
 	if goal_accounting_type != current_accounting_type:
+		current_method_name = sys._getframe().f_code.co_name
 		module.fail_json(module, result, 'changes failed',
 			current_method   = current_method_name,
 			private_lan_name = private_lan_name,
-			current_set      = private_lan_set,
+			current_set      = private_lan_info,
 		)
 
 	result['changed_attributes']['accounting_type'] = goal_accounting_type
-	return (result, private_lan_set)
+	return (result, private_lan_info)
 
-def modify_private_lan_description(module, result, private_lan_set):
+def modify_private_lan_description(module, result, private_lan_info):
 	result           = copy.deepcopy(result)
-	private_lan_set = copy.deepcopy(private_lan_set)
-	if private_lan_set is None:
-		return (result, private_lan_set)
+	private_lan_info = copy.deepcopy(private_lan_info)
+	if private_lan_info is None:
+		return (result, private_lan_info)
 
-	current_method_name = sys._getframe().f_code.co_name
-	private_lan_name    = module.params['private_lan_name']
-	network_id          = private_lan_set.get('network_id')
+	private_lan_name = module.params['private_lan_name']
+	network_id       = private_lan_info.get('network_id')
 
-	# skip check
-	current_description = private_lan_set.get('description')
+	current_description = private_lan_info.get('description')
 	goal_description    = module.params.get('description')
 	if goal_description is None or goal_description == current_description:
-		return (result, private_lan_set)
+		return (result, private_lan_info)
 
-	# update description
 	params = dict(
 		NetworkId = network_id,
 		Attribute = 'description',
 		Value = goal_description,
 	)
-	(result, private_lan_set) = modify_private_lan_attribute(module, result, private_lan_set, params)
+	(result, private_lan_info) = modify_private_lan_attribute(module, result, private_lan_info, params)
 
-	# update check
-	current_description = private_lan_set.get('description')
+	current_description = private_lan_info.get('description')
 	if goal_description != current_description:
+		current_method_name = sys._getframe().f_code.co_name
 		module.fail_json(module, result, 'changes failed',
 			current_method   = current_method_name,
 			private_lan_name = private_lan_name,
-			current_set      = private_lan_set,
+			current_set      = private_lan_info,
 		)
 
 	result['changed_attributes']['description'] = goal_description
-	return (result, private_lan_set)
+	return (result, private_lan_info)
 
-def modify_private_lan(module, result, private_lan_set):
+def modify_private_lan(module, result, private_lan_info):
 	result           = copy.deepcopy(result)
-	private_lan_set = copy.deepcopy(private_lan_set)
-	if private_lan_set is None:
-		return (result, private_lan_set)
+	private_lan_info = copy.deepcopy(private_lan_info)
+	if private_lan_info is None:
+		return (result, private_lan_info)
 
-	(result, private_lan_set) = modify_private_lan_name(module, result, private_lan_set)
+	(result, private_lan_info) = modify_private_lan_name(module, result, private_lan_info)
 
-	(result, private_lan_set) = modify_private_lan_cidr_block(module, result, private_lan_set)
+	(result, private_lan_info) = modify_private_lan_cidr_block(module, result, private_lan_info)
 
-	(result, private_lan_set) = modify_private_lan_accounting_type(module, result, private_lan_set)
+	(result, private_lan_info) = modify_private_lan_accounting_type(module, result, private_lan_info)
 
-	(result, private_lan_set) = modify_private_lan_description(module, result, private_lan_set)
+	(result, private_lan_info) = modify_private_lan_description(module, result, private_lan_info)
 
-	return (result, private_lan_set)
+	return (result, private_lan_info)
 
-def delete_private_lan(module, result, private_lan_set):
+def delete_private_lan(module, result, private_lan_info):
 	result           = copy.deepcopy(result)
-	private_lan_set = copy.deepcopy(private_lan_set)
-	if private_lan_set is None:
-		return (result, private_lan_set)
+	private_lan_info = copy.deepcopy(private_lan_info)
+	if private_lan_info is None:
+		return (result, private_lan_info)
 
-	current_method_name = sys._getframe().f_code.co_name
-	goal_state          = 'absent'
-	private_lan_name    = private_lan_set.get('private_lan_name')
+	private_lan_name = private_lan_info.get('private_lan_name')
 
-	# build parameters
 	param = dict(
 		PrivateLanName = private_lan_name,
 	)
 
-	# delete private_lan
-	res = request_to_api(module, 'POST', 'NiftyDeletePrivateLan', param)
-	if res['status'] != 200:
+	current_method_name = sys._getframe().f_code.co_name
+	res = request_to_api_post(module, API_ACTION_DELETE, param)
+	if res['status'] >= 300:
 		error_info = get_api_error(res['xml_body'])
 		module.fail_json(module, result, 'changes failed',
 			current_method   = current_method_name,
@@ -455,38 +444,37 @@ def delete_private_lan(module, result, private_lan_set):
 			**error_info
 		)
 
-	# wait for pending
-	(result, private_lan_set) = wait_for_pending(module, result, goal_state)
+	state = STATUS_ABSENT
+	(result, private_lan_info) = wait_for_state(module, result, state)
 
-	# update check
-	if private_lan_set is None:
+	if private_lan_info is None:
 		module.fail_json(module, result, 'changes failed',
 			current_method   = current_method_name,
 			private_lan_name = private_lan_name,
-			current_set      = private_lan_set,
+			current_set      = private_lan_info,
 		)
 
 	result['changed_attributes']['private_lan_name'] = private_lan_name
-	return (result, private_lan_set)
+	return (result, private_lan_info)
 
 
 def run(module):
 	result = dict(
 		created            = False,
 		changed_attributes = dict(),
-		state              = 'absent',
+		state              = STATUS_ABSENT,
 	)
 
-	goal_state  = module.params['state']
-	(result, private_lan_set) = describe_private_lans(module, result)
+	state = module.params['state']
+	(result, private_lan_info) = describe_private_lans(module, result)
 
-	if goal_state == 'present':
-		(result, private_lan_set) = create_private_lan(module, result, private_lan_set)
-		(result, private_lan_set) = modify_private_lan(module, result, private_lan_set)
-	elif goal_state == 'absent':
-		(result, private_lan_set) = delete_private_lan(module, result, private_lan_set)
+	if state == STATUS_PRESENT:
+		(result, private_lan_info) = create_private_lan(module, result, private_lan_info)
+		(result, private_lan_info) = modify_private_lan(module, result, private_lan_info)
+	elif state == STATUS_ABSENT:
+		(result, private_lan_info) = delete_private_lan(module, result, private_lan_info)
 	else:
-		module.fail_json(status=-1, msg='invalid state (goal state = "{0}")'.format(goal_state))
+		module.fail_json(status=-1, msg='invalid state (goal state = "{0}")'.format(state))
 
 	created            = result.get('created')
 	changed_attributes = result.get('changed_attributes')
@@ -506,7 +494,7 @@ def main():
 			accounting_type   = dict(required=False, type='str', default=None),
 			description       = dict(required=False, type='str', default=None),
 			availability_zone = dict(required=False, type='str', default=None),
-			state             = dict(required=False, type='str', default='present', choices=['present','absent']),
+			state             = dict(required=False, type='str', default=STATUS_PRESENT, choices=[STATUS_PRESENT,STATUS_ABSENT]),
 		)
 	)
 	run(module)
@@ -518,3 +506,4 @@ import copy
 
 if __name__ == '__main__':
 	main()
+
