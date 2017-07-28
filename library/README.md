@@ -26,13 +26,13 @@
 
 * results (2017/07/26)
 ```
-Name                      Stmts   Miss  Cover
-------------------------------------------
-niftycloud.py             171     31    82%
-niftycloud_fw.py          319      5    98%
-niftycloud_lb.py          125     21    83%
-niftycloud_private_lan.py 239      6    97%
-niftycloud_volume.py      105     25    76%
-------------------------------------------
-TOTAL                    959     88    91%
+Name                        Stmts   Miss  Cover
+-----------------------------------------------
+niftycloud.py                 171     31    82%
+niftycloud_fw.py              319      5    98%
+niftycloud_lb.py              125     21    83%
+niftycloud_private_lan.py     259      0   100%
+niftycloud_volume.py          105     25    76%
+-----------------------------------------------
+TOTAL                         979     82    92%
 ```
