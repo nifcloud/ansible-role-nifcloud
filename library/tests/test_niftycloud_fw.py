@@ -38,10 +38,6 @@ class TestNiftycloud(unittest.TestCase):
 				log_limit            = 100000,
 				state                = 'present',
 				purge_ip_permissions = True,
-				log_filters          = dict(
-					net_bios  = True,
-					broadcast = True,
-				),
 				ip_permissions       = [
 					dict(
 						in_out      = 'OUT',
@@ -99,10 +95,6 @@ class TestNiftycloud(unittest.TestCase):
 			group_name     = 'fw001',
 			description    = None,
 			log_limit      = 1000,
-			log_filters    = dict(
-				net_bios  = False,
-				broadcast = False,
-			),
 			ip_permissions = [
 				dict(
 					in_out      = 'OUT',
@@ -736,10 +728,6 @@ class TestNiftycloud(unittest.TestCase):
 		self.assertIsInstance(info['description'], str)
 		self.assertEqual(info['description'], 'sample fw')
 		self.assertEqual(info['log_limit'],   100000)
-		self.assertEqual(info['log_filters'], dict(
-			net_bios  = True,
-			broadcast = True,
-		))
 		self.assertEqual(info['ip_permissions'], [
 			dict(
 				ip_protocol = 'TCP',
@@ -1153,217 +1141,15 @@ class TestNiftycloud(unittest.TestCase):
 				)
 		self.assertEqual(cm.exception.message, 'failed')
 
-	# update log_filter net_bios success
-	def test_update_security_group_log_filter_net_bios_success(self):
-		changed_security_group_info = dict(
-			copy.deepcopy(self.security_group_info),
-			log_filters = dict(
-				copy.deepcopy(self.security_group_info['log_filters']),
-				net_bios = self.mockModule.params['log_filters']['net_bios'],
-			),
-		)
-		mock_describe_security_group = mock.MagicMock(
-			return_value=(
-				self.result['present'],
-				changed_security_group_info,
-			))
-
-		with mock.patch('niftycloud_fw.update_security_group_attribute', mock_describe_security_group):
-			(result, info) = niftycloud_fw.update_security_group_log_filter_net_bios(
-				self.mockModule,
-				self.result['present'],
-				self.security_group_info
-			)
-
-		self.assertEqual(result, dict(
-			created = False,
-			changed_attributes = dict(
-				log_filter_net_bios = self.mockModule.params['log_filters']['net_bios'],
-			),
-			state = 'present',
-		))
-		self.assertEqual(info, changed_security_group_info)
-
-	# update log_filter net_bios absent
-	def test_update_security_group_log_filter_net_bios_absent(self):
-		(result, info) = niftycloud_fw.update_security_group_log_filter_net_bios(
-			self.mockModule,
-			self.result['absent'],
-			None
-		)
-
-		self.assertEqual(result, self.result['absent'])
-		self.assertIsNone(info)
-
-	# update log_filter net_bios is None  * do nothing
-	def test_update_security_group_log_filter_net_bios_none(self):
-		security_group_info = dict(
-			copy.deepcopy(self.security_group_info),
-			log_filters = dict(
-				copy.deepcopy(self.security_group_info['log_filters']),
-				net_bios = self.mockModule.params['log_filters']['net_bios'],
-			),
-		)
-                mock_module = mock.MagicMock(
-                        params = dict(
-				copy.deepcopy(self.mockModule.params),
-				log_filters = dict(
-					copy.deepcopy(self.mockModule.params['log_filters']),
-					net_bios = None,
-				),
-			)
-                )
-
-		(result, info) = niftycloud_fw.update_security_group_log_filter_net_bios(
-			mock_module,
-			self.result['present'],
-			security_group_info
-		)
-
-		self.assertEqual(result, self.result['present'])
-		self.assertEqual(info, security_group_info)
-
-	# update log_filter net_bios is no change  * do nothing
-	def test_update_security_group_log_filter_net_bios_skip(self):
-		changed_security_group_info = dict(
-			copy.deepcopy(self.security_group_info),
-			log_filters = dict(
-				copy.deepcopy(self.security_group_info['log_filters']),
-				net_bios = self.mockModule.params['log_filters']['net_bios'],
-			),
-		)
-
-		(result, info) = niftycloud_fw.update_security_group_log_filter_net_bios(
-			self.mockModule,
-			self.result['present'],
-			changed_security_group_info
-		)
-
-		self.assertEqual(result, self.result['present'])
-		self.assertEqual(info, changed_security_group_info)
-
-	# update log_filter net_bios failed
-	def test_update_security_group_log_filter_net_bios_failed(self):
-		with mock.patch('niftycloud_fw.update_security_group_attribute', self.mockDescribeSecurityGroup):
-			with self.assertRaises(Exception) as cm:
-				(result, info) = niftycloud_fw.update_security_group_log_filter_net_bios(
-					self.mockModule,
-					self.result['present'],
-					self.security_group_info
-				)
-		self.assertEqual(cm.exception.message, 'failed')
-
-	# update log_filter broadcast success
-	def test_update_security_group_log_filter_broadcast_success(self):
-		changed_security_group_info = dict(
-			copy.deepcopy(self.security_group_info),
-			log_filters = dict(
-				copy.deepcopy(self.security_group_info['log_filters']),
-				broadcast = self.mockModule.params['log_filters']['broadcast'],
-			),
-		)
-		mock_describe_security_group = mock.MagicMock(
-			return_value=(
-				self.result['present'],
-				changed_security_group_info,
-			))
-
-		with mock.patch('niftycloud_fw.update_security_group_attribute', mock_describe_security_group):
-			(result, info) = niftycloud_fw.update_security_group_log_filter_broadcast(
-				self.mockModule,
-				self.result['present'],
-				self.security_group_info
-			)
-
-		self.assertEqual(result, dict(
-			created = False,
-			changed_attributes = dict(
-				log_filter_broadcast = self.mockModule.params['log_filters']['broadcast'],
-			),
-			state = 'present',
-		))
-		self.assertEqual(info, changed_security_group_info)
-
-	# update log_filter broadcast absent
-	def test_update_security_group_log_filter_broadcast_absent(self):
-		(result, info) = niftycloud_fw.update_security_group_log_filter_broadcast(
-			self.mockModule,
-			self.result['absent'],
-			None
-		)
-
-		self.assertEqual(result, self.result['absent'])
-		self.assertIsNone(info)
-
-	# update log_filter broadcast is None  * do nothing
-	def test_update_security_group_log_filter_broadcast_none(self):
-		security_group_info = dict(
-			copy.deepcopy(self.security_group_info),
-			log_filters = dict(
-				copy.deepcopy(self.security_group_info['log_filters']),
-				broadcast = self.mockModule.params['log_filters']['broadcast'],
-			),
-		)
-                mock_module = mock.MagicMock(
-                        params = dict(
-				copy.deepcopy(self.mockModule.params),
-				log_filters = dict(
-					copy.deepcopy(self.mockModule.params['log_filters']),
-					broadcast = None,
-				),
-			)
-                )
-
-		(result, info) = niftycloud_fw.update_security_group_log_filter_broadcast(
-			mock_module,
-			self.result['present'],
-			security_group_info
-		)
-
-		self.assertEqual(result, self.result['present'])
-		self.assertEqual(info, security_group_info)
-
-	# update log_filter broadcast is no change  * do nothing
-	def test_update_security_group_log_filter_broadcast_skip(self):
-		changed_security_group_info = dict(
-			copy.deepcopy(self.security_group_info),
-			log_filters = dict(
-				copy.deepcopy(self.security_group_info['log_filters']),
-				broadcast = self.mockModule.params['log_filters']['broadcast'],
-			),
-		)
-
-		(result, info) = niftycloud_fw.update_security_group_log_filter_broadcast(
-			self.mockModule,
-			self.result['present'],
-			changed_security_group_info
-		)
-
-		self.assertEqual(result, self.result['present'])
-		self.assertEqual(info, changed_security_group_info)
-
-	# update log_filter broadcast failed
-	def test_update_security_group_log_filter_broadcast_failed(self):
-		with mock.patch('niftycloud_fw.update_security_group_attribute', self.mockDescribeSecurityGroup):
-			with self.assertRaises(Exception) as cm:
-				(result, info) = niftycloud_fw.update_security_group_log_filter_broadcast(
-					self.mockModule,
-					self.result['present'],
-					self.security_group_info
-				)
-		self.assertEqual(cm.exception.message, 'failed')
-
 	# update
 	def test_update_security_group(self):
 		with mock.patch('niftycloud_fw.update_security_group_description', self.mockDescribeSecurityGroup):
 			with mock.patch('niftycloud_fw.update_security_group_log_limit', self.mockDescribeSecurityGroup):
-				with mock.patch('niftycloud_fw.update_security_group_log_filter_net_bios', self.mockDescribeSecurityGroup):
-					with mock.patch('niftycloud_fw.update_security_group_log_filter_broadcast', self.mockDescribeSecurityGroup):
-						(result, info) = niftycloud_fw.update_security_group(
-							self.mockModule,
-							self.result['present'],
-							self.security_group_info
-						)
+				(result, info) = niftycloud_fw.update_security_group(
+					self.mockModule,
+					self.result['present'],
+					self.security_group_info
+				)
 
 		self.assertEqual(result, self.result['present'])
 		self.assertEqual(info, self.security_group_info)

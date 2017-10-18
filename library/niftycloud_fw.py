@@ -55,14 +55,6 @@ options:
 			- The upper limit number of logs to retain of communication rejected by the firewall settings rules
 		required: false
 		default: null
-	log_filter_net_bios:
-		description:
-			- Restrain broadcast logs of Windows NetBIOS
-		default: null
-	log_filter_broadcast:
-		description:
-			- Restrain broadcast logs in common global network and common private network
-		default: null
 	ip_permissions:
 		description:
 			- List of rules that allows incoming or outgoing communication to resources
@@ -220,20 +212,6 @@ def describe_security_group(module, result):
 		else:
 			description = description.text
 
-		# set net_bios
-		# <groupLogFilterNetBios> returns following parameters
-		# > true(string): <groupLogFilterNetBios>true</groupLogFilterNetBios>
-		# > false(string): <groupLogFilterNetBios>false</groupLogFilterNetBios>
-		# > field is always return
-		log_filter_net_bios = (net_bios.text.lower() != 'false')
-
-		# set broadcast
-		# <groupLogFilterBroadcast> returns following parameters
-		# > true(string): <groupLogFilterBroadcast>true</groupLogFilterBroadcast>
-		# > false(string): <groupLogFilterBroadcast>false</groupLogFilterBroadcast>
-		# > field is always return
-		log_filter_broadcast = (broadcast.text.lower() != 'false')
-
 		# set ip_permissions
 		ip_permission_list = []
 		for ip_permission in (ip_permissions or []):
@@ -260,10 +238,6 @@ def describe_security_group(module, result):
 			group_name     = group_name.text,
 			log_limit      = int(log_limit.text),
 			description    = description,
-			log_filters    = dict(
-				net_bios  = log_filter_net_bios,
-				broadcast = log_filter_broadcast,
-			),
 			ip_permissions = ip_permission_list,
 		)
 
@@ -414,74 +388,6 @@ def update_security_group_log_limit(module, result, security_group_info):
 	result['changed_attributes']['log_limit'] = goal_log_limit
 	return (result, security_group_info)
 
-def update_security_group_log_filter_net_bios(module, result, security_group_info):
-	result              = copy.deepcopy(result)
-	security_group_info = copy.deepcopy(security_group_info)
-	if security_group_info is None:
-		return (result, security_group_info)
-
-	current_method_name = sys._getframe().f_code.co_name
-	group_name          = module.params['group_name']
-
-	# skip check
-	current_net_bios = security_group_info.get('log_filters').get('net_bios')
-	goal_net_bios    = module.params.get('log_filters').get('net_bios')
-	if goal_net_bios is None or goal_net_bios == current_net_bios:
-		return (result, security_group_info)
-
-	# update log filter net_bios
-	params = dict(
-		GroupName             = group_name,
-		GroupLogFilterNetBios = goal_net_bios,
-	)
-	(result, security_group_info) = update_security_group_attribute(module, result, security_group_info, params)
-
-	# update check
-	current_net_bios = security_group_info.get('log_filters').get('net_bios')
-	if goal_net_bios != current_net_bios:
-		fail(module, result, 'changes failed',
-			current_method = current_method_name,
-			group_name     = group_name,
-			current_info   = security_group_info,
-		)
-
-	result['changed_attributes']['log_filter_net_bios'] = goal_net_bios
-	return (result, security_group_info)
-
-def update_security_group_log_filter_broadcast(module, result, security_group_info):
-	result              = copy.deepcopy(result)
-	security_group_info = copy.deepcopy(security_group_info)
-	if security_group_info is None:
-		return (result, security_group_info)
-
-	current_method_name = sys._getframe().f_code.co_name
-	group_name          = module.params['group_name']
-
-	# skip check
-	current_broadcast = security_group_info.get('log_filters').get('broadcast')
-	goal_broadcast    = module.params.get('log_filters').get('broadcast')
-	if goal_broadcast is None or goal_broadcast == current_broadcast:
-		return (result, security_group_info)
-
-	# update log filter broadcast
-	params = dict(
-		GroupName               = group_name,
-		GroupLogFilterBroadcast = goal_broadcast,
-	)
-	(result, security_group_info) = update_security_group_attribute(module, result, security_group_info, params)
-
-	# update check
-	current_broadcast = security_group_info.get('log_filters').get('broadcast')
-	if goal_broadcast != current_broadcast:
-		fail(module, result, 'changes failed',
-			current_method = current_method_name,
-			group_name     = group_name,
-			current_info   = security_group_info,
-		)
-
-	result['changed_attributes']['log_filter_broadcast'] = goal_broadcast
-	return (result, security_group_info)
-
 def update_security_group(module, result, security_group_info):
 	result              = copy.deepcopy(result)
 	security_group_info = copy.deepcopy(security_group_info)
@@ -491,10 +397,6 @@ def update_security_group(module, result, security_group_info):
 	(result, security_group_info) = update_security_group_description(module, result, security_group_info)
 
 	(result, security_group_info) = update_security_group_log_limit(module, result, security_group_info)
-
-	(result, security_group_info) = update_security_group_log_filter_net_bios(module, result, security_group_info)
-
-	(result, security_group_info) = update_security_group_log_filter_broadcast(module, result, security_group_info)
 
 	return (result, security_group_info)
 
@@ -690,7 +592,6 @@ def main():
 			description          = dict(required=False, type='str',  default=None),
 			availability_zone    = dict(required=False, type='str',  default=None),
 			log_limit            = dict(required=False, type='int',  default=None),
-			log_filters          = dict(required=False, type='dict', default=dict()),
 			ip_permissions       = dict(required=False, type='list', default=list()),
 			state                = dict(required=False, type='str',  default='present', choices=['present']),
 			purge_ip_permissions = dict(required=False, type='bool', default=True),

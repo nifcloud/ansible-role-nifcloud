@@ -25,7 +25,6 @@ Create or update, authorize, revoke a firewall group.
 | description          | no       |            | str  |           |         | Description of target firewall group                                                              |
 | availability_zone    | no       |            | str  |           |         | Availability zone                                                                                 |
 | log_limit            | no       |            | int  |           |         | The upper limit number of logs to retain of communication rejected by the firewall settings rules |
-| log_filters          | no       | dict()     | dict |           |         | Options for restrain broadcast logs                                                               |
 | ip_permissions       | no       | list()     | list |           |         | List of rules that allows incoming or outgoing communication to resources                         |
 | state                | no       | "present"  | str  | "present" |         | Goal status                                                                                       |
 | purge_ip_permissions | no       | True       | bool |           |         | Purge existing ip permissions that are not found in ip permissions                                |
@@ -48,9 +47,6 @@ Create or update, authorize, revoke a firewall group.
     description: "test firewall"
     availability_zone: "west-11"
     log_limit: 100000
-    log_filters:
-      net_bios: True
-      broadcast: True
     ip_permissions:
       - ip_protocol: "ANY"
         in_out: "OUT"
