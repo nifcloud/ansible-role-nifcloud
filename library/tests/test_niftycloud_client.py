@@ -1,17 +1,3 @@
-# Copyright 2017 FUJITSU CLOUD TECHNOLOGIES LIMITED
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
 import os
 import sys
 sys.path.append('.')
@@ -19,12 +5,10 @@ sys.path.append('..')
 
 import unittest
 import mock
-import niftycloud
 import xml.etree.ElementTree as etree
-import copy
-import urllib, hmac, hashlib, base64
+import niftycloud_client
 
-class TestNiftycloud(unittest.TestCase):
+class TestNiftycloudAuth(unittest.TestCase):
 	def setUp(self):
 		self.mockModule = mock.MagicMock(
 			params = dict(
@@ -51,16 +35,10 @@ class TestNiftycloud(unittest.TestCase):
 		self.xmlnamespace = 'https://cp.cloud.nifty.com/api/'
 		self.xml = niftycloud_api_response_sample
 
-		self.mockRequestsGetDescribeInstance  = mock.MagicMock(
+		self.mockRequestsInternalServerError = mock.MagicMock(
 			return_value=mock.MagicMock(
-				status_code = 200,
-				text = self.xml['describeInstance']
-			))
-
-		self.mockRequestsGetStopInstance  = mock.MagicMock(
-			return_value=mock.MagicMock(
-				status_code = 200,
-				text = self.xml['stopInstance']
+				status_code = 500,
+				text = self.xml['internalServerError']
 			))
 
 		self.mockRequestsPostRunInstance = mock.MagicMock(
@@ -69,200 +47,160 @@ class TestNiftycloud(unittest.TestCase):
 				text = self.xml['runInstance']
 			))
 
-		self.mockRequestsPostStartInstance = mock.MagicMock(
+                self.mockRequestsGetDescribeInstance  = mock.MagicMock(
 			return_value=mock.MagicMock(
 				status_code = 200,
-				text = self.xml['startInstance']
+				text = self.xml['describeInstance']
 			))
 
-		self.mockRequestsInternalServerError = mock.MagicMock(
+		self.mockRequestsPostRunInstance = mock.MagicMock(
 			return_value=mock.MagicMock(
-				status_code = 500,
-				text = self.xml['internalServerError']
+				status_code = 200,
+				text = self.xml['runInstance']
 			))
-
-		self.mockGetInstanceStateError = mock.MagicMock(return_value=-1)
-		self.mockGetInstanceState16 = mock.MagicMock(return_value=16)
-		self.mockGetInstanceState80 = mock.MagicMock(return_value=80)
-
-		self.mockStopInstance  = mock.MagicMock(return_value=(True, 80, 'stopped'))
-		self.mockStartInstance = mock.MagicMock(return_value=(True, 16, 'running'))
 
 		self.mockRequestsError = mock.MagicMock(return_value=None)
 
-		patcher = mock.patch('time.sleep')
-		self.addCleanup(patcher.stop)
-		self.mock_time_sleep = patcher.start()
+	# calculate signature
+	def test_calculate_signature_v2(self):
+		secret_access_key = self.mockModule.params['secret_access_key']
+		method = 'GET'
+		endpoint = self.mockModule.params['endpoint']
+		path = '/api/'
+		params = dict(
+			Action = 'DescribeInstances',
+			AccessKeyId = self.mockModule.params['access_key'],
+			SignatureMethod = 'HmacSHA256',
+			SignatureVersion = '2',
+			InstanceId = self.mockModule.params['instance_id']
+		)
 
-	# running
-	def test_get_instance_state_present(self):
+		signature = niftycloud_client.calculate_signature_v2(secret_access_key, method, endpoint, path, params)
+		self.assertEqual(signature, 'Y7/0nc3dCK9UNkp+w5sh08ybJLQjh69mXOgcxJijDEU=')
+
+	# calculate signature with string parameter including slash
+	def test_calculate_signature_v2_with_slash(self):
+		secret_access_key = self.mockModule.params['secret_access_key']
+		method = 'GET'
+		endpoint = self.mockModule.params['endpoint']
+		path = '/api/'
+		params = dict(
+			Action = 'DescribeInstances',
+			AccessKeyId = self.mockModule.params['access_key'],
+			SignatureMethod = 'HmacSHA256',
+			SignatureVersion = '2',
+			InstanceId = self.mockModule.params['instance_id'],
+			Description = '/'
+		)
+
+		signature = niftycloud_client.calculate_signature_v2(secret_access_key, method, endpoint, path, params)
+
+		# This constant string is signature calculated by "library/tests/files/calculate_signature_sample.sh".
+		# This shell-script calculate with encoding a slash, like "niftycloud.calculate_signature()".
+		self.assertEqual(signature, 'dHOoGcBgO14Roaioryic9IdFPg7G+lihZ8Wyoa25ok4=')
+ 
+	# method get
+	def test_request_to_api_get(self):
+		method = 'GET'
+		action = 'DescribeInstances'
+		params = dict(
+			ImageId = self.mockModule.params['image_id'],
+			KeyName = self.mockModule.params['key_name'],
+			InstanceId = self.mockModule.params['instance_id']
+		)
+
 		with mock.patch('requests.get', self.mockRequestsGetDescribeInstance):
-			self.assertEqual(16, niftycloud.get_instance_state(self.mockModule))
+			info = niftycloud_client.request_to_api(self.mockModule, method, action, params)
 
-	# not found
-	def test_get_instance_state_absent(self):
+		self.assertEqual(info['status'], 200)
+		self.assertEqual(info['xml_namespace'], dict(nc = self.xmlnamespace))
+		self.assertEqual(etree.tostring(info['xml_body']),
+				 etree.tostring(etree.fromstring(self.xml['describeInstance'])))
+
+	# method post
+	def test_request_to_api_post(self):
+		method = 'POST'
+		action = 'RunInstances'
+		params = dict(
+			ImageId = self.mockModule.params['image_id'],
+			KeyName = self.mockModule.params['key_name'],
+			InstanceId = self.mockModule.params['instance_id']
+		)
+
+		with mock.patch('requests.post', self.mockRequestsPostRunInstance):
+			info = niftycloud_client.request_to_api(self.mockModule, method, action, params)
+
+		self.assertEqual(info['status'], 200)
+		self.assertEqual(info['xml_namespace'], dict(nc = self.xmlnamespace))
+		self.assertEqual(etree.tostring(info['xml_body']),
+				 etree.tostring(etree.fromstring(self.xml['runInstance'])))
+
+	# api error
+	def test_request_to_api_error(self):
+		method = 'GET'
+		action = 'DescribeInstances'
+		params = dict(
+			ImageId = self.mockModule.params['image_id'],
+			KeyName = self.mockModule.params['key_name'],
+			InstanceId = self.mockModule.params['instance_id']
+		)
+
 		with mock.patch('requests.get', self.mockRequestsInternalServerError):
-			self.assertEqual(-1, niftycloud.get_instance_state(self.mockModule))
+			info = niftycloud_client.request_to_api(self.mockModule, method, action, params)
 
-	# create success
-	def test_create_instance_success(self):
-		with mock.patch('requests.post', self.mockRequestsPostRunInstance):
-			with mock.patch('niftycloud.get_instance_state', self.mockGetInstanceState16):
-				self.assertEqual(
-					(True, 16, 'created'),
-					niftycloud.create_instance(self.mockModule)
-				)
+		self.assertEqual(info['status'], 500)
+		self.assertEqual(etree.tostring(info['xml_body']),
+				 etree.tostring(etree.fromstring(self.xml['internalServerError'])))
 
-        # create success without startup_script
-        def test_create_instance_without_startup_script_success(self):
-		params = copy.deepcopy(self.mockModule.params)
-		params['startup_script'] = None
-		params['startup_script_vars'] = {}
-		
-		mock_module = mock.MagicMock(
-			params=params,
-			fail_json = copy.deepcopy(self.mockModule.fail_json)
+	# method failed
+	def test_request_to_api_unknown(self):
+		method = 'UNKNOWN'
+		action = 'DescribeInstances'
+		params = dict(
+			ImageId = self.mockModule.params['image_id'],
+			KeyName = self.mockModule.params['key_name'],
+			InstanceId = self.mockModule.params['instance_id']
 		)
 
-                with mock.patch('requests.post', self.mockRequestsPostRunInstance):
-                        with mock.patch('niftycloud.get_instance_state', self.mockGetInstanceState16):
-                                self.assertEqual(
-                                        (True, 16, 'created'),
-                                        niftycloud.create_instance(mock_module)
-                                )
-
-        # create success without startup_script_vars
-        def test_create_instance_without_startup_script_vars_success(self):
-                params = copy.deepcopy(self.mockModule.params)
-		params['startup_script'] = '{0}/files/startup_script_blank'.format(os.path.dirname(__file__))
-                params['startup_script_vars'] = {}
-
-                mock_module = mock.MagicMock(
-                        params=params,
-                        fail_json = copy.deepcopy(self.mockModule.fail_json)
-                )
-
-                with mock.patch('requests.post', self.mockRequestsPostRunInstance):
-                        with mock.patch('niftycloud.get_instance_state', self.mockGetInstanceState16):
-                                self.assertEqual(
-                                        (True, 16, 'created'),
-                                        niftycloud.create_instance(mock_module)
-                                )
-
-	# change state failed
-	def test_create_instance_failed(self):
-		with mock.patch('requests.post', self.mockRequestsPostRunInstance):
-			with mock.patch('niftycloud.get_instance_state', self.mockGetInstanceStateError):
-				self.assertRaises(
-					Exception,
-					niftycloud.create_instance,
-					(self.mockModule)
-				)
-
-	# internal server error
-	def test_create_instance_error(self):
-		with mock.patch('requests.post', self.mockRequestsInternalServerError):
-			self.assertRaises(
-				Exception,
-				niftycloud.create_instance,
-				(self.mockModule)
-			)
-
-	# running(16) -> running(16)  * do nothing
-	def test_start_instance_running(self):
-		self.assertEqual(
-			(False, 16, 'running'),
-			niftycloud.start_instance(self.mockModule, 16)
-		)
-
-	# absent(-1) -> created(16)
-	def test_start_instance_absent(self):
-		with mock.patch('requests.post', self.mockRequestsPostRunInstance):
-			with mock.patch('niftycloud.get_instance_state', self.mockGetInstanceState16):
-				self.assertEqual(
-					(True, 16, 'created'),
-					niftycloud.start_instance(self.mockModule, -1)
-				)
-
-	# stopped(80) -> running(16)
-	def test_start_instance_stopped_success(self):
-		with mock.patch('requests.post', self.mockRequestsPostStartInstance):
-			with mock.patch('niftycloud.get_instance_state', self.mockGetInstanceState16):
-				self.assertEqual(
-					(True, 16, 'running'),
-					niftycloud.start_instance(self.mockModule, 80)
-				)
-
-	# change state failed
-	def test_start_instance_failed(self):
-		with mock.patch('requests.post', self.mockRequestsPostStartInstance):
-			with mock.patch('niftycloud.get_instance_state', self.mockGetInstanceState80):
-				self.assertRaises(
-					Exception,
-					niftycloud.start_instance,
-					(self.mockModule, 80)
-				)
-
-	# internal server error
-	def test_start_instance_error(self):
-		with mock.patch('requests.post', self.mockRequestsInternalServerError):
-			self.assertRaises(
-				Exception,
-				niftycloud.start_instance,
-				(self.mockModule, 80)
-			)
-
-	# stopped(80) -> stopped(80)  * do nothing
-	def test_stop_instance_stopped(self):
-		self.assertEqual(
-			(False, 80, 'stopped'),
-			niftycloud.stop_instance(self.mockModule, 80)
-		)
-
-	# absent(-1)
-	def test_stop_instance_absent(self):
 		self.assertRaises(
 			Exception,
-			niftycloud.stop_instance,
-			(self.mockModule, -1)
+			niftycloud_client.request_to_api,
+			(self.mockModule, method, action, params)
 		)
 
-	# running(16) -> stopped(80)
-	def test_stop_instance_running(self):
-		with mock.patch('requests.get', self.mockRequestsGetStopInstance):
-			with mock.patch('niftycloud.get_instance_state', self.mockGetInstanceState80):
-				self.assertEqual(
-					(True, 80, 'stopped'),
-					niftycloud.stop_instance(self.mockModule, 16)
-				)
+	# network error
+	def test_request_to_api_request_error(self):
+		method = 'GET'
+		action = 'DescribeInstances'
+		params = dict(
+			ImageId = self.mockModule.params['image_id'],
+			KeyName = self.mockModule.params['key_name'],
+			InstanceId = self.mockModule.params['instance_id']
+		)
 
-	# change state failed
-	def test_stop_instance_failed(self):
-		with mock.patch('requests.get', self.mockRequestsGetStopInstance):
-			with mock.patch('niftycloud.get_instance_state', self.mockGetInstanceState16):
-				self.assertRaises(
-					Exception,
-					niftycloud.stop_instance,
-					(self.mockModule, 16)
-				)
-
-	# internal server error
-	def test_stop_instance_error(self):
-		with mock.patch('requests.get', self.mockRequestsInternalServerError):
+		with mock.patch('requests.get', self.mockRequestsError):
 			self.assertRaises(
 				Exception,
-				niftycloud.stop_instance,
-				(self.mockModule, 16)
+				niftycloud_client.request_to_api,
+				(self.mockModule, method, action, params)
 			)
 
-	# running(16) - restart -> running(16)
-	def test_restart_instance(self):
-		with mock.patch('niftycloud.stop_instance', self.mockStopInstance):
-			with mock.patch('niftycloud.start_instance', self.mockStartInstance):
-				self.assertEqual(
-					(True, 16, 'restarted'),
-					niftycloud.restart_instance(self.mockModule, 16)
-				)
+	# get api error code & message
+	def test_get_api_error(self):
+		method = 'GET'
+		action = 'DescribeInstances'
+		params = dict(
+			ImageId = self.mockModule.params['image_id'],
+			KeyName = self.mockModule.params['key_name'],
+			InstanceId = self.mockModule.params['instance_id']
+		)
+
+		with mock.patch('requests.get', self.mockRequestsInternalServerError):
+			info = niftycloud_client.request_to_api(self.mockModule, method, action, params)
+
+		error_info = niftycloud_client.get_api_error(info['xml_body'])
+		self.assertEqual(error_info['code'],    'Server.InternalError')
+		self.assertEqual(error_info['message'], 'An error has occurred. Please try again later.')
 
 niftycloud_api_response_sample = dict(
 	describeInstance = '''
@@ -552,6 +490,3 @@ niftycloud_api_response_sample = dict(
 </Response>
 '''
 )
-
-if __name__ == '__main__':
-	unittest.main()
