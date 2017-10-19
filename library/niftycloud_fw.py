@@ -24,8 +24,15 @@ import urllib
 import xml.etree.ElementTree as etree
 
 import requests
-from ansible.module_utils.basic import AnsibleModule, sys, unicode
+from ansible.module_utils.basic import AnsibleModule, sys
+from ansible.module_utils.six import text_type
 
+try:
+    # Python 2
+    unicode
+except NameError:
+    # Python 3
+    unicode = text_type
 
 DOCUMENTATION = '''
 ---
@@ -198,11 +205,10 @@ def contains_ip_permissions(ip_permissions, target_ip_permission):
 
 
 def except_ip_permissions(ip_permissions_a, ip_permissions_b):
-    ip_permissions = list(
-        ip_permission_a
-        for ip_permission_a in ip_permissions_a
+    ip_permissions = [
+        ip_permission_a for ip_permission_a in ip_permissions_a
         if not contains_ip_permissions(ip_permissions_b, ip_permission_a)
-    )
+    ]
     return ip_permissions
 
 
@@ -247,7 +253,6 @@ def describe_security_group(module, result):
             './/{{{nc}}}ipPermissions/{{{nc}}}item'
             .format(**res['xml_namespace'])
         )
-
         # set description
         if description is None or description.text is None:
             description = ''
@@ -275,19 +280,15 @@ def describe_security_group(module, result):
             _group_name = ip_permission.find(
                 './/{{{nc}}}groupName'.format(**res['xml_namespace']))
 
-            from_port = (int(_from_port.text)
-                         if _from_port is not None else None)
-            to_port = int(_to_port.text) if _to_port is not None else None
-            cidr_ip = _cidr_ip.text if _cidr_ip is not None else None
-            group_name = _group_name.text if _group_name is not None else None
-
             ip_permission_list.append(dict(
                 ip_protocol=_ip_protocol.text,
                 in_out=_in_out.text,
-                from_port=from_port,
-                to_port=to_port,
-                cidr_ip=cidr_ip,
-                group_name=group_name
+                from_port=(int(_from_port.text)
+                           if _from_port is not None else None),
+                to_port=int(_to_port.text) if _to_port is not None else None,
+                cidr_ip=_cidr_ip.text if _cidr_ip is not None else None,
+                group_name=(_group_name.text
+                            if _group_name is not None else None)
             ))
 
         security_group_info = dict(

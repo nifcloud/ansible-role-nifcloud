@@ -272,9 +272,9 @@ def deregist_instance(module):
                                  'DeregisterInstancesFromLoadBalancer', params)
 
             if res['status'] == 200:
-                lb_label = '{}:{}:->{}'.format(loadbalancer_name,
-                                               loadbalancer_port,
-                                               instance_port)
+                lb_label = '{}:{}->{}'.format(loadbalancer_name,
+                                              loadbalancer_port,
+                                              instance_port)
                 deregister_lbs.append(lb_label)
                 changed = True
             else:
