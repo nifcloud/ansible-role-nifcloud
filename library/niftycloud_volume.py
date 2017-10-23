@@ -73,7 +73,7 @@ options:
         description:
             - Goal status ("present" or "absent")  * "absent" is not implemented
         required: true
-'''
+'''  # noqa
 
 EXAMPLES = '''
 - action: niftycloud_lb access_key="YOUR_ACCESS_KEY" secret_access_key="YOUR_SECRET_ACCESS_KEY" endpoint="west-1.cp.cloud.nifty.com" size="100" volume_id="testdisk001" disk_type="3" instance_id="test001" accounting_type="2" state="present"

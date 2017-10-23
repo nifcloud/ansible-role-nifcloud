@@ -252,7 +252,9 @@ def deregist_instance(module):
                     loadbalancer_name != module.params['loadbalancer_name']):
                 continue
 
-            loadbalancer_port = int(member.find(loadbalancer_port_pattern).text)
+            loadbalancer_port = int(
+                member.find(loadbalancer_port_pattern).text
+            )
             if (module.params['loadbalancer_port'] is not None and
                     loadbalancer_port != module.params['loadbalancer_port']):
                 continue

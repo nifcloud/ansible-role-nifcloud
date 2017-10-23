@@ -512,7 +512,7 @@ def authorize_security_group(module, result, security_group_info):
         params = dict(GroupName=group_name)
 
         params['IpPermissions.1.InOut'] = authorize_rule.get('in_out')
-        params['IpPermissions.1.IpProtocol'] = authorize_rule.get('ip_protocol')
+        params['IpPermissions.1.IpProtocol'] = authorize_rule.get('ip_protocol')  # noqa
         params['IpPermissions.1.Description'] = authorize_rule.get('description', '')  # noqa
 
         _from_port = authorize_rule.get('from_port')
@@ -591,7 +591,7 @@ def revoke_security_group(module, result, security_group_info):
     for index, revoke_rule in enumerate(revoke_rules):
         ip_permission_param_prefix = 'IpPermissions.{0}.'.format(index + 1)
 
-        params[ip_permission_param_prefix + 'InOut'] = revoke_rule.get('in_out')
+        params[ip_permission_param_prefix + 'InOut'] = revoke_rule.get('in_out')  # noqa
         params[ip_permission_param_prefix + 'IpProtocol'] = revoke_rule.get('ip_protocol')  # noqa
 
         _from_port = revoke_rule.get('from_port')
