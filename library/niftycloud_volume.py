@@ -23,7 +23,7 @@ import urllib
 import xml.etree.ElementTree as etree
 
 import requests
-from ansible.module_utils.basic import AnsibleModule
+from ansible.module_utils.basic import *  # noqa
 
 
 DOCUMENTATION = '''
@@ -275,7 +275,7 @@ def detach_volume(module):
 
 
 def main():
-    module = AnsibleModule(
+    module = AnsibleModule(  # noqa
         argument_spec=dict(
             access_key=dict(required=True,  type='str'),
             secret_access_key=dict(required=True,  type='str', no_log=True),

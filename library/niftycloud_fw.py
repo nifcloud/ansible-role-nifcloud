@@ -19,17 +19,18 @@ import base64
 import copy
 import hashlib
 import hmac
+import sys
 import time
 import urllib
 import xml.etree.ElementTree as etree
 
 import requests
-from ansible.module_utils.basic import AnsibleModule, sys
+from ansible.module_utils.basic import *  # noqa
 from ansible.module_utils.six import text_type
 
 try:
     # Python 2
-    unicode
+    unicode  # noqa
 except NameError:
     # Python 3
     unicode = text_type
@@ -673,7 +674,7 @@ def run(module):
 
 
 def main():
-    module = AnsibleModule(
+    module = AnsibleModule(  # noqa
         argument_spec=dict(
             access_key=dict(required=True,  type='str'),
             secret_access_key=dict(required=True,  type='str',  no_log=True),
