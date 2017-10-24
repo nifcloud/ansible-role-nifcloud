@@ -13,7 +13,7 @@ addons:
 
 install:
   # Install dependences
-  - pip install ansible nose coveralls mock requests
+  - pip install ansible nose coveralls mock requests flake8
 
   # Check ansible version
   - ansible --version
@@ -28,6 +28,7 @@ script:
   # NIFTY Cloud modules check
   - nosetests --no-byte-compile --with-coverage --cover-package=library/ --where=library/
   - coveralls
+  - flake8 library/*.py
 
 notifications:
   webhooks: https://galaxy.ansible.com/api/v1/notifications/
