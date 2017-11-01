@@ -1,10 +1,10 @@
-niftycloud
+NIFCLOUD
 =========
 
-Ansible role for importing module of NIFTYCloud
+Ansible role for importing module of NIFCLOUD
 
-[![Build Status](https://travis-ci.org/NIFTYCloud/ansible-role-niftycloud.svg?branch=master)](https://travis-ci.org/NIFTYCloud/ansible-role-niftycloud)
-[![Coverage Status](https://coveralls.io/repos/github/NIFTYCloud/ansible-role-niftycloud/badge.svg?branch=master)](https://coveralls.io/github/NIFTYCloud/ansible-role-niftycloud?branch=master)
+[![Build Status](https://travis-ci.org/nifcloud/ansible-role-nifcloud.svg?branch=master)](https://travis-ci.org/nifcloud/ansible-role-nifcloud)
+[![Coverage Status](https://coveralls.io/repos/github/nifcloud/ansible-role-nifcloud/badge.svg?branch=master)](https://coveralls.io/github/nifcloud/ansible-role-nifcloud?branch=master)
 
 Requirements
 ------------
@@ -29,11 +29,11 @@ Example Playbook
 ```
 hosts: servers
 roles:
-  - niftycloud
+  - nifcloud
 ```
 
 * How to use libraries?
-  * Refer to [README.md](library/README.md) of ansible modules for NIFTY Cloud
+  * Refer to [README.md](library/README.md) of ansible modules for NIFCLOUD
 
 License
 -------

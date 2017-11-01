@@ -29,9 +29,9 @@ from ansible.module_utils.basic import *  # noqa
 DOCUMENTATION = '''
 ---
 module: niftycloud
-short_description: create, start or stop an instance in NIFTY Cloud
+short_description: create, start or stop an instance in NIFCLOUD
 description:
-    - Create, start or stop an instance of NIFTY Cloud
+    - Create, start or stop an instance of NIFCLOUD
 version_added: "0.1"
 options:
     access_key:
