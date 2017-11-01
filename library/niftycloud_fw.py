@@ -38,7 +38,7 @@ except NameError:
 DOCUMENTATION = '''
 ---
 module: niftycloud_fw
-short_description: Create or update, authorize, revoke a firewall group in NIFTY Cloud
+short_description: Create or update, authorize, revoke a firewall group in NIFCLOUD
 description:
     - Create or update, authorize, revoke a firewall group.
 version_added: "0.1"
