@@ -254,17 +254,17 @@ def create_instance(module):
     if module.params['public_ip'] is not None:
         params['PublicIp'] = module.params['public_ip']
 
-        enumerated = enumerate(module.params['network_interface'], start=1)
-        for n, network_interface in enumerated:
-            if network_interface.get('network_id') is not None:
-                key = 'NetworkInterface.{}.NetworkId'.format(n)
-                params[key] = network_interface.get('network_id')
-            if network_interface.get('network_name')is not None:
-                key = 'NetworkInterface.{}.NetworkName'.format(n)
-                params[key] = network_interface.get('network_name')
-            if network_interface.get('ipAddress') is not None:
-                key = 'NetworkInterface.{}.IpAddress'.format(n)
-                params[key] = network_interface.get('ipAddress')
+    enumerated = enumerate(module.params['network_interface'], start=1)
+    for n, network_interface in enumerated:
+        if network_interface.get('network_id') is not None:
+            key = 'NetworkInterface.{0}.NetworkId'.format(n)
+            params[key] = network_interface.get('network_id')
+        if network_interface.get('network_name') is not None:
+            key = 'NetworkInterface.{0}.NetworkName'.format(n)
+            params[key] = network_interface.get('network_name')
+        if network_interface.get('ipAddress') is not None:
+            key = 'NetworkInterface.{0}.IpAddress'.format(n)
+            params[key] = network_interface.get('ipAddress')
 
     configure_user_data(module, params)
 
