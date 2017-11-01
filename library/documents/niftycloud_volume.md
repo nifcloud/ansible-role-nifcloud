@@ -1,4 +1,4 @@
-# niftycloud_volume - Attach the volume to an instance in NIFTY Cloud
+# niftycloud_volume - Attach the volume to an instance in NIFCLOUD
 
 * [Synopsis](#synopsis)
 * [Requirements](#requirements)
@@ -7,7 +7,7 @@
 
 ## Synopsis
 
-Attach the volume to an instance of NIFTY Cloud.
+Attach the volume to an instance of NIFCLOUD.
 
 ## Requirements
 
@@ -18,8 +18,8 @@ Attach the volume to an instance of NIFTY Cloud.
 
 | parameter           | required | default    | type | choices               | comments                                              |
 |---------------------|----------|------------|------|-----------------------|-------------------------------------------------------|
-| access_key          | yes      |            | str  |                       | NIFTY Cloud API access key                            |
-| secret_access_key   | yes      |            | str  |                       | NIFTY Cloud API secret access key                     |
+| access_key          | yes      |            | str  |                       | NIFCLOUD API access key                               |
+| secret_access_key   | yes      |            | str  |                       | NIFCLOUD API secret access key                        |
 | endpoint            | yes      |            | str  |                       | API endpoint of target region                         |
 | size                | yes      |            | str  |                       | Volume size                                           |
 | volume_id           | no       |            | str  |                       | Volume name                                           |

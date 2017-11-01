@@ -1,5 +1,5 @@
 
-IMAGE_NAME := "niftycloud/ansible-role-niftycloud"
+IMAGE_NAME := "nifcloud/ansible-role-nifcloud"
 
 build:
 	docker build -t ${IMAGE_NAME} .

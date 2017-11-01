@@ -28,9 +28,9 @@ from ansible.module_utils.basic import *  # noqa
 DOCUMENTATION = '''
 ---
 module: niftycloud_lb
-short_description: De-registers or registers an instance from Load Balancer in NIFTY Cloud
+short_description: De-registers or registers an instance from Load Balancer in NIFCLOUD
 description:
-    - De-registers or registers an instance of NIFTY Cloud from Load Balancer.
+    - De-registers or registers an instance of NIFCLOUD from Load Balancer.
 version_added: "0.1"
 options:
     access_key:
