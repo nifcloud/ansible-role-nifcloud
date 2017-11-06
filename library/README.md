@@ -23,14 +23,14 @@
 # cat *,cover
 ```
 
-* results (2017/09/29)
+* results (2017/11/01)
 ```
 Name                   Stmts   Miss  Cover
 ------------------------------------------
-niftycloud.py            171     31    82%
-niftycloud_fw.py         282      5    98%
-niftycloud_lb.py         125     21    83%
-niftycloud_volume.py     105     25    76%
+niftycloud.py            190     37    81%
+niftycloud_fw.py         297      7    98%
+niftycloud_lb.py         135     23    83%
+niftycloud_volume.py     110     25    77%
 ------------------------------------------
-TOTAL                    683     82    88%
+TOTAL                    732     92    87%
 ```
