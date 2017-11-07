@@ -274,9 +274,9 @@ def deregist_instance(module):
                                  'DeregisterInstancesFromLoadBalancer', params)
 
             if res['status'] == 200:
-                lb_label = '{}:{}->{}'.format(loadbalancer_name,
-                                              loadbalancer_port,
-                                              instance_port)
+                lb_label = '{0}:{1}->{2}'.format(loadbalancer_name,
+                                                 loadbalancer_port,
+                                                 instance_port)
                 deregister_lbs.append(lb_label)
                 changed = True
             else:
@@ -287,7 +287,7 @@ def deregist_instance(module):
                     error_code=error_info.get('code'),
                     error_message=error_info.get('message')
                 )
-        return (changed, 'absent({})'.format(','.join(deregister_lbs)))
+        return (changed, 'absent({0})'.format(','.join(deregister_lbs)))
     else:
         error_info = get_api_error(lbs_res['xml_body'])
         module.fail_json(
