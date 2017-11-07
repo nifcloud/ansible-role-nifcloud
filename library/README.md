@@ -23,14 +23,14 @@
 # cat *,cover
 ```
 
-* results (2017/09/29)
+* results (2017/11/07)
 ```
-Name                   Stmts   Miss  Cover
-------------------------------------------
-nifcloud.py            171     31    82%
-nifcloud_fw.py         282      5    98%
-nifcloud_lb.py         125     21    83%
-nifcloud_volume.py     105     25    76%
-------------------------------------------
-TOTAL                    683     82    88%
+Name                 Stmts   Miss  Cover
+----------------------------------------
+nifcloud.py            190     37    81%
+nifcloud_fw.py         297      7    98%
+nifcloud_lb.py         135     23    83%
+nifcloud_volume.py     110     25    77%
+----------------------------------------
+TOTAL                  732     92    87%
 ```
