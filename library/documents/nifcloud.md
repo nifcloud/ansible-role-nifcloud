@@ -1,4 +1,4 @@
-# niftycloud - create, start or stop an instance in NIFCLOUD
+# nifcloud - create, start or stop an instance in NIFCLOUD
 
 * [Synopsis](#synopsis)
 * [Requirements](#requirements)
@@ -48,7 +48,7 @@ Create, start or stop an instance of NIFCLOUD.
 
 - name: Start server
   local_action:
-    module: niftycloud
+    module: nifcloud
     access_key: "YOUR ACCESS KEY"
     secret_access_key: "YOUR SECRET ACCESS KEY"
     endpoint: "west-1.cp.cloud.nifty.com"

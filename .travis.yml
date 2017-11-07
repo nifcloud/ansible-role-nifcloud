@@ -25,7 +25,7 @@ script:
   # Basic role syntax check
   - ansible-playbook tests/test.yml -i tests/inventory --syntax-check
   
-  # NIFTY Cloud modules check
+  # NIFCLOUD modules check
   - nosetests --no-byte-compile --with-coverage --cover-package=library/ --where=library/
   - coveralls
   - flake8 library/*.py

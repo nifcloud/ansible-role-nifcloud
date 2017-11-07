@@ -1,4 +1,4 @@
-# niftycloud_volume - Attach the volume to an instance in NIFCLOUD
+# nifcloud_volume - Attach the volume to an instance in NIFCLOUD
 
 * [Synopsis](#synopsis)
 * [Requirements](#requirements)
@@ -38,7 +38,7 @@ Attach the volume to an instance of NIFCLOUD.
 
 - name: Attach volume to instance
   local_action:
-    module: niftycloud_volume
+    module: nifcloud_volume
     access_key: "YOUR ACCESS KEY"
     secret_access_key: "YOUR SECRET ACCESS KEY"
     endpoint: "west-1.cp.cloud.nifty.com"

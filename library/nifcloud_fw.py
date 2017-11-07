@@ -37,7 +37,7 @@ except NameError:
 
 DOCUMENTATION = '''
 ---
-module: niftycloud_fw
+module: nifcloud_fw
 short_description: Create or update, authorize, revoke a firewall group in NIFCLOUD
 description:
     - Create or update, authorize, revoke a firewall group.
@@ -92,7 +92,7 @@ options:
 '''  # noqa
 
 EXAMPLES = '''
-- action: niftycloud_fw access_key="YOUR_ACCESS_KEY" secret_access_key="YOUR_SECRET_ACCESS_KEY" endpoint="west-1.cp.cloud.nifty.com" group_name="fw001"
+- action: nifcloud_fw access_key="YOUR_ACCESS_KEY" secret_access_key="YOUR_SECRET_ACCESS_KEY" endpoint="west-1.cp.cloud.nifty.com" group_name="fw001"
 '''  # noqa
 
 

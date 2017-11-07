@@ -1,9 +1,9 @@
-# Ansible modules for NIFTY Cloud
+# Ansible modules for NIFCLOUD
 
-* [niftycloud](documents/niftycloud.md)
-* [niftycloud_fw](documents/niftycloud_fw.md)
-* [niftycloud_lb](documents/niftycloud_lb.md)
-* [niftycloud_volume](documents/niftycloud_volume.md)
+* [nifcloud](documents/nifcloud.md)
+* [nifcloud_fw](documents/nifcloud_fw.md)
+* [nifcloud_lb](documents/nifcloud_lb.md)
+* [nifcloud_volume](documents/nifcloud_volume.md)
 
 ## Test
 
@@ -14,12 +14,12 @@
 
 * execute tests
 ```
-# nosetests --no-byte-compile --with-coverage > /dev/null 2>&1 && coverage report --include=./niftycloud*.py
+# nosetests --no-byte-compile --with-coverage > /dev/null 2>&1 && coverage report --include=./nifcloud*.py
 ```
 
 * make anotated copies
 ```
-# nosetests --no-byte-compile --with-coverage > /dev/null 2>&1 && coverage annotate --include=./niftycloud*.py
+# nosetests --no-byte-compile --with-coverage > /dev/null 2>&1 && coverage annotate --include=./nifcloud*.py
 # cat *,cover
 ```
 
@@ -27,10 +27,10 @@
 ```
 Name                   Stmts   Miss  Cover
 ------------------------------------------
-niftycloud.py            171     31    82%
-niftycloud_fw.py         282      5    98%
-niftycloud_lb.py         125     21    83%
-niftycloud_volume.py     105     25    76%
+nifcloud.py            171     31    82%
+nifcloud_fw.py         282      5    98%
+nifcloud_lb.py         125     21    83%
+nifcloud_volume.py     105     25    76%
 ------------------------------------------
 TOTAL                    683     82    88%
 ```

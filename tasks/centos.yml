@@ -13,7 +13,7 @@
     module: yum
     name: epel-release
     state: present
-  register: niftycloud_check_epel_results
+  register: nifcloud_check_epel_results
   ignore_errors: yes
 
 - name: Add EPEL repository (for CentOS)
@@ -21,7 +21,7 @@
   local_action:
     module: yum
     name: "https://download.fedoraproject.org/pub/epel/epel-release-latest-{{ ansible_distribution_major_version }}.noarch.rpm"
-  when: niftycloud_check_epel_results|failed
+  when: nifcloud_check_epel_results|failed
 
 - name: Install python-pip (for CentOS)
   run_once: true

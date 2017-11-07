@@ -1,4 +1,4 @@
-# niftycloud_fw - Create or update, authorize, revoke a firewall group in NIFCLOUD
+# nifcloud_fw - Create or update, authorize, revoke a firewall group in NIFCLOUD
 
 * [Synopsis](#synopsis)
 * [Requirements](#requirements)
@@ -39,7 +39,7 @@ Create or update, authorize, revoke a firewall group.
 
 - name: Regist server to firewall group
   local_action:
-    module: niftycloud_fw
+    module: nifcloud_fw
     access_key: "YOUR ACCESS KEY"
     secret_access_key: "YOUR SECRET ACCESS KEY"
     endpoint: "west-1.cp.cloud.nifty.com"

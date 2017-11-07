@@ -1,4 +1,4 @@
-# niftycloud_lb - De-registers or registers an instance from Load Balancer in NIFCLOUD
+# nifcloud_lb - De-registers or registers an instance from Load Balancer in NIFCLOUD
 
 * [Synopsis](#synopsis)
 * [Requirements](#requirements)
@@ -37,7 +37,7 @@ De-registers or registers an instance of NIFCLOUD from Load Balancer.
 
 - name: Regist server to load balancer
   local_action:
-    module: niftycloud_lb
+    module: nifcloud_lb
     access_key: "YOUR ACCESS KEY"
     secret_access_key: "YOUR SECRET ACCESS KEY"
     endpoint: "west-1.cp.cloud.nifty.com"
