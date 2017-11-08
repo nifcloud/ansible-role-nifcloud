@@ -4,7 +4,7 @@ Thank you for your contributing! There are a few things you should to know.
 
 ## Reporting bugs, enhancement requests
 
-You can report bugs, enhancement requests in [issue page](https://github.com/NIFTYCloud/ansible-role-niftycloud/issues).
+You can report bugs, enhancement requests in [issue page](https://github.com/nifcloud/ansible-role-nifcloud/issues).
 
 ## Workflow of releasing
 

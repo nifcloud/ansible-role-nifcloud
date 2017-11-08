@@ -1,4 +1,4 @@
-# niftycloud_fw - Create or update, authorize, revoke a firewall group in NIFTY Cloud
+# nifcloud_fw - Create or update, authorize, revoke a firewall group in NIFCLOUD
 
 * [Synopsis](#synopsis)
 * [Requirements](#requirements)
@@ -18,8 +18,8 @@ Create or update, authorize, revoke a firewall group.
 
 | parameter            | required | default    | type | choices   | aliases | comments                                                                                          |
 |----------------------|----------|------------|------|-----------|---------|---------------------------------------------------------------------------------------------------|
-| access_key           | yes      |            | str  |           |         | NIFTY Cloud API access key                                                                        |
-| secret_access_key    | yes      |            | str  |           |         | NIFTY Cloud API secret access key                                                                 |
+| access_key           | yes      |            | str  |           |         | NIFCLOUD API access key                                                                           |
+| secret_access_key    | yes      |            | str  |           |         | NIFCLOUD API secret access key                                                                    |
 | endpoint             | yes      |            | str  |           |         | API endpoint of target region                                                                     |
 | group_name           | yes      |            | str  |           | name    | Target firewall group ID                                                                          |
 | description          | no       |            | str  |           |         | Description of target firewall group                                                              |
@@ -39,7 +39,7 @@ Create or update, authorize, revoke a firewall group.
 
 - name: Regist server to firewall group
   local_action:
-    module: niftycloud_fw
+    module: nifcloud_fw
     access_key: "YOUR ACCESS KEY"
     secret_access_key: "YOUR SECRET ACCESS KEY"
     endpoint: "west-1.cp.cloud.nifty.com"

@@ -1,4 +1,4 @@
-# niftycloud - create, start or stop an instance in NIFTY Cloud
+# nifcloud - create, start or stop an instance in NIFCLOUD
 
 * [Synopsis](#synopsis)
 * [Requirements](#requirements)
@@ -7,7 +7,7 @@
 
 ## Synopsis
 
-Create, start or stop an instance of NIFTY Cloud.
+Create, start or stop an instance of NIFCLOUD.
 
 ## Requirements
 
@@ -18,8 +18,8 @@ Create, start or stop an instance of NIFTY Cloud.
 
 | parameter                      | required | default    | type | choices                             | comments                                         |
 |------------------------------- |----------|------------|------|-------------------------------------|--------------------------------------------------|
-| access_key                     | yes      |            | str  |                                     | NIFTY Cloud API access key                       |
-| secret_access_key              | yes      |            | str  |                                     | NIFTY Cloud API secret access key                |
+| access_key                     | yes      |            | str  |                                     | NIFCLOUD API access key                          |
+| secret_access_key              | yes      |            | str  |                                     | NIFCLOUD API secret access key                   |
 | endpoint                       | yes      |            | str  |                                     | API endpoint of target region                    |
 | instance_id                    | yes      |            | str  |                                     | Instacen ID                                      |
 | state                          | yes      |            | str  | "running", "stopped" or "restarted" | Goal status                                      |
@@ -48,7 +48,7 @@ Create, start or stop an instance of NIFTY Cloud.
 
 - name: Start server
   local_action:
-    module: niftycloud
+    module: nifcloud
     access_key: "YOUR ACCESS KEY"
     secret_access_key: "YOUR SECRET ACCESS KEY"
     endpoint: "west-1.cp.cloud.nifty.com"

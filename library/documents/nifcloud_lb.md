@@ -1,4 +1,4 @@
-# niftycloud_lb - De-registers or registers an instance from Load Balancer in NIFTY Cloud
+# nifcloud_lb - De-registers or registers an instance from Load Balancer in NIFCLOUD
 
 * [Synopsis](#synopsis)
 * [Requirements](#requirements)
@@ -7,7 +7,7 @@
 
 ## Synopsis
 
-De-registers or registers an instance of NIFTY Cloud from Load Balancer.
+De-registers or registers an instance of NIFCLOUD from Load Balancer.
 
 ## Requirements
 
@@ -18,8 +18,8 @@ De-registers or registers an instance of NIFTY Cloud from Load Balancer.
 
 | parameter           | required | default    | type | choices               | comments                                              |
 |---------------------|----------|------------|------|-----------------------|-------------------------------------------------------|
-| access_key          | yes      |            | str  |                       | NIFTY Cloud API access key                            |
-| secret_access_key   | yes      |            | str  |                       | NIFTY Cloud API secret access key                     |
+| access_key          | yes      |            | str  |                       | NIFCLOUD API access key                               |
+| secret_access_key   | yes      |            | str  |                       | NIFCLOUD API secret access key                        |
 | endpoint            | yes      |            | str  |                       | API endpoint of target region                         |
 | instance_id         | yes      |            | str  |                       | Instacen ID                                           |
 | instance_port       | no       | None       | int  |                       | Destination Port  (required for registraiton)         |
@@ -37,7 +37,7 @@ De-registers or registers an instance of NIFTY Cloud from Load Balancer.
 
 - name: Regist server to load balancer
   local_action:
-    module: niftycloud_lb
+    module: nifcloud_lb
     access_key: "YOUR ACCESS KEY"
     secret_access_key: "YOUR SECRET ACCESS KEY"
     endpoint: "west-1.cp.cloud.nifty.com"

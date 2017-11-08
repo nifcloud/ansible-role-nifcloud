@@ -28,10 +28,10 @@ from ansible.module_utils.basic import *  # noqa
 
 DOCUMENTATION = '''
 ---
-module: niftycloud
-short_description: create, start or stop an instance in NIFTY Cloud
+module: nifcloud
+short_description: create, start or stop an instance in NIFCLOUD
 description:
-    - Create, start or stop an instance of NIFTY Cloud
+    - Create, start or stop an instance of NIFCLOUD
 version_added: "0.1"
 options:
     access_key:
@@ -114,7 +114,7 @@ options:
 '''
 
 EXAMPLES = '''
-- action: niftycloud access_key="YOUR_ACCESS_KEY" secret_access_key="YOUR_SECRET_ACCESS_KEY" endpoint="west-1.cp.cloud.nifty.com" instance_id="test001" state="running" image_id="26" key_name="YOUR_SSH_KEY_NAME" security_group="webapp" instance_type="mini" availability_zone="west-11" accounting_type="2" ip_type="static"
+- action: nifcloud access_key="YOUR_ACCESS_KEY" secret_access_key="YOUR_SECRET_ACCESS_KEY" endpoint="west-1.cp.cloud.nifty.com" instance_id="test001" state="running" image_id="26" key_name="YOUR_SSH_KEY_NAME" security_group="webapp" instance_type="mini" availability_zone="west-11" accounting_type="2" ip_type="static"
 '''  # noqa
 
 

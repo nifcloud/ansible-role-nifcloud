@@ -21,11 +21,11 @@ sys.path.append('..')
 
 import unittest
 import mock
-import niftycloud_fw
+import nifcloud_fw
 import xml.etree.ElementTree as etree
 import copy
 
-class TestNiftycloud(unittest.TestCase):
+class TestNifcloud(unittest.TestCase):
 	def setUp(self):
 		self.mockModule = mock.MagicMock(
 			params = dict(
@@ -76,7 +76,7 @@ class TestNiftycloud(unittest.TestCase):
 		)
 
 		self.xmlnamespace = 'https://cp.cloud.nifty.com/api/'
-		self.xml = niftycloud_api_response_sample
+		self.xml = nifcloud_api_response_sample
 
 		self.result = dict(
 			absent = dict(
@@ -210,7 +210,7 @@ class TestNiftycloud(unittest.TestCase):
 			GroupName        = self.mockModule.params['group_name'],
 		)
 
-		signature = niftycloud_fw.calculate_signature(secret_access_key, method, endpoint, path, params)
+		signature = nifcloud_fw.calculate_signature(secret_access_key, method, endpoint, path, params)
 		self.assertEqual(signature, '+05Mgbw/WCN+U6euoFzHIyFi8i9UUTGg1uiNHqYcu38=')
 
 	# calculate signature with string parameter including slash
@@ -228,10 +228,10 @@ class TestNiftycloud(unittest.TestCase):
 			GroupDescription = '/'
 		)
 
-		signature = niftycloud_fw.calculate_signature(secret_access_key, method, endpoint, path, params)
+		signature = nifcloud_fw.calculate_signature(secret_access_key, method, endpoint, path, params)
 
 		# This constant string is signature calculated by "library/tests/files/calculate_signature_sample.sh".
-		# This shell-script calculate with encoding a slash, like "niftycloud.calculate_signature()".
+		# This shell-script calculate with encoding a slash, like "nifcloud.calculate_signature()".
 		self.assertEqual(signature, 'SsYPHOdKWpiniT39oGNJ5EjJum2gvqlUbozNxM9CSjE=')
 
 	# method get
@@ -242,7 +242,7 @@ class TestNiftycloud(unittest.TestCase):
 		params["GroupName.1"] = self.mockModule.params['group_name']
 
 		with mock.patch('requests.get', self.mockRequestsGetDescribeSecurityGroups):
-			info = niftycloud_fw.request_to_api(self.mockModule, method, action, params)
+			info = nifcloud_fw.request_to_api(self.mockModule, method, action, params)
 
 		self.assertEqual(info['status'], 200)
 		self.assertEqual(info['xml_namespace'], dict(nc = self.xmlnamespace))
@@ -258,7 +258,7 @@ class TestNiftycloud(unittest.TestCase):
 		)
 
 		with mock.patch('requests.post', self.mockRequestsPostCreateSecurityGroup):
-			info = niftycloud_fw.request_to_api(self.mockModule, method, action, params)
+			info = nifcloud_fw.request_to_api(self.mockModule, method, action, params)
 
 		self.assertEqual(info['status'], 200)
 		self.assertEqual(info['xml_namespace'], dict(nc = self.xmlnamespace))
@@ -273,7 +273,7 @@ class TestNiftycloud(unittest.TestCase):
 		params["GroupName.1"] = self.mockModule.params['group_name']
 
 		with mock.patch('requests.get', self.mockRequestsInternalServerError):
-			info = niftycloud_fw.request_to_api(self.mockModule, method, action, params)
+			info = nifcloud_fw.request_to_api(self.mockModule, method, action, params)
 
 		self.assertEqual(info['status'], 500)
 		self.assertEqual(etree.tostring(info['xml_body']),
@@ -288,7 +288,7 @@ class TestNiftycloud(unittest.TestCase):
 
 		self.assertRaises(
 			Exception,
-			niftycloud_fw.request_to_api,
+			nifcloud_fw.request_to_api,
 			(self.mockModule, method, action, params)
 		)
 
@@ -302,7 +302,7 @@ class TestNiftycloud(unittest.TestCase):
 		with mock.patch('requests.get', self.mockRequestsError):
 			self.assertRaises(
 				Exception,
-				niftycloud_fw.request_to_api,
+				nifcloud_fw.request_to_api,
 				(self.mockModule, method, action, params)
 			)
 
@@ -314,16 +314,16 @@ class TestNiftycloud(unittest.TestCase):
 		params["GroupName.1"] = self.mockModule.params['group_name']
 
 		with mock.patch('requests.get', self.mockRequestsInternalServerError):
-			info = niftycloud_fw.request_to_api(self.mockModule, method, action, params)
+			info = nifcloud_fw.request_to_api(self.mockModule, method, action, params)
 
-		error_info = niftycloud_fw.get_api_error(info['xml_body'])
+		error_info = nifcloud_fw.get_api_error(info['xml_body'])
 		self.assertEqual(error_info['code'],    'Server.InternalError')
 		self.assertEqual(error_info['message'], 'An error has occurred. Please try again later.')
 
 	# throw failed
 	def test_fail(self):
 		with self.assertRaises(Exception) as cm:
-			niftycloud_fw.fail(
+			nifcloud_fw.fail(
 				self.mockModule,
 				self.result['absent'],
 				'error message',
@@ -357,7 +357,7 @@ class TestNiftycloud(unittest.TestCase):
 			to_port     = None,
 			group_name  = None,
 		)
-		self.assertTrue(niftycloud_fw.contains_ip_permissions(ip_permissions, ip_permission))
+		self.assertTrue(nifcloud_fw.contains_ip_permissions(ip_permissions, ip_permission))
 
 	# contains_ip_permissions true case 2
 	def test_contains_ip_permissions_true_case_2(self):
@@ -385,7 +385,7 @@ class TestNiftycloud(unittest.TestCase):
 			description = 'dummy',
 			cidr_ip     = None,
 		)
-		self.assertTrue(niftycloud_fw.contains_ip_permissions(ip_permissions, ip_permission))
+		self.assertTrue(nifcloud_fw.contains_ip_permissions(ip_permissions, ip_permission))
 
 	# contains_ip_permissions true case 3
 	def test_contains_ip_permissions_true_case_3(self):
@@ -413,7 +413,7 @@ class TestNiftycloud(unittest.TestCase):
 			description = 'dummy',
 			cidr_ip     = None,
 		)
-		self.assertTrue(niftycloud_fw.contains_ip_permissions(ip_permissions, ip_permission))
+		self.assertTrue(nifcloud_fw.contains_ip_permissions(ip_permissions, ip_permission))
 
 	# contains_ip_permissions true case 4
 	def test_contains_ip_permissions_true_case_4(self):
@@ -440,7 +440,7 @@ class TestNiftycloud(unittest.TestCase):
 			description = 'dummy',
 			cidr_ip     = None,
 		)
-		self.assertTrue(niftycloud_fw.contains_ip_permissions(ip_permissions, ip_permission))
+		self.assertTrue(nifcloud_fw.contains_ip_permissions(ip_permissions, ip_permission))
 
 	# has_ip_permission false case 1
 	def test_contains_ip_permissions_false_case_1(self):
@@ -465,7 +465,7 @@ class TestNiftycloud(unittest.TestCase):
 			cidr_ip     = '0.0.0.0/0',
 			description = 'all outgoing protocols are allow',
 		)
-		self.assertFalse(niftycloud_fw.contains_ip_permissions(ip_permissions, ip_permission))
+		self.assertFalse(nifcloud_fw.contains_ip_permissions(ip_permissions, ip_permission))
 
 	# contains_ip_permissions false case 2
 	def test_contains_ip_permissions_false_case_2(self):
@@ -490,7 +490,7 @@ class TestNiftycloud(unittest.TestCase):
 			cidr_ip     = '0.0.0.0/0',
 			description = 'all outgoing protocols are allow',
 		)
-		self.assertFalse(niftycloud_fw.contains_ip_permissions(ip_permissions, ip_permission))
+		self.assertFalse(nifcloud_fw.contains_ip_permissions(ip_permissions, ip_permission))
 
 	# contains_ip_permissions false case 3
 	def test_contains_ip_permissions_false_case_3(self):
@@ -515,7 +515,7 @@ class TestNiftycloud(unittest.TestCase):
 			cidr_ip     = '10.0.0.0/16',
 			description = 'all outgoing protocols are allow',
 		)
-		self.assertFalse(niftycloud_fw.contains_ip_permissions(ip_permissions, ip_permission))
+		self.assertFalse(nifcloud_fw.contains_ip_permissions(ip_permissions, ip_permission))
 
 	# contains_ip_permissions false case 4
 	def test_contains_ip_permissions_false_case_3(self):
@@ -541,7 +541,7 @@ class TestNiftycloud(unittest.TestCase):
 			to_port     = 29999,
 			group_name  = 'admin',
 		)
-		self.assertFalse(niftycloud_fw.contains_ip_permissions(ip_permissions, ip_permission))
+		self.assertFalse(nifcloud_fw.contains_ip_permissions(ip_permissions, ip_permission))
 
 	# contains_ip_permissions false case 5
 	def test_contains_ip_permissions_false_case_5(self):
@@ -567,7 +567,7 @@ class TestNiftycloud(unittest.TestCase):
 			to_port     = 30000,
 			group_name  = 'admin',
 		)
-		self.assertFalse(niftycloud_fw.contains_ip_permissions(ip_permissions, ip_permission))
+		self.assertFalse(nifcloud_fw.contains_ip_permissions(ip_permissions, ip_permission))
 
 	# contains_ip_permissions false case 6
 	def test_contains_ip_permissions_false_case_6(self):
@@ -593,7 +593,7 @@ class TestNiftycloud(unittest.TestCase):
 			to_port     = 29999,
 			group_name  = 'default',
 		)
-		self.assertFalse(niftycloud_fw.contains_ip_permissions(ip_permissions, ip_permission))
+		self.assertFalse(nifcloud_fw.contains_ip_permissions(ip_permissions, ip_permission))
 
 	# except_ip_permissions case 1
 	def test_except_ip_permissions_case_1(self):
@@ -615,7 +615,7 @@ class TestNiftycloud(unittest.TestCase):
 		ip_permissions_b = []
 
 		self.assertEqual(
-			niftycloud_fw.except_ip_permissions(ip_permissions_a, ip_permissions_b),
+			nifcloud_fw.except_ip_permissions(ip_permissions_a, ip_permissions_b),
 			ip_permissions_a
 		)
 
@@ -639,7 +639,7 @@ class TestNiftycloud(unittest.TestCase):
 		ip_permissions_b = ip_permissions_a
 
 		self.assertEqual(
-			niftycloud_fw.except_ip_permissions(ip_permissions_a, ip_permissions_b),
+			nifcloud_fw.except_ip_permissions(ip_permissions_a, ip_permissions_b),
 			[]
 		)
 
@@ -670,7 +670,7 @@ class TestNiftycloud(unittest.TestCase):
 		]
 
 		self.assertEqual(
-			niftycloud_fw.except_ip_permissions(ip_permissions_a, ip_permissions_b),
+			nifcloud_fw.except_ip_permissions(ip_permissions_a, ip_permissions_b),
 			[
 				dict(
 					in_out      = 'IN',
@@ -709,14 +709,14 @@ class TestNiftycloud(unittest.TestCase):
 		]
 
 		self.assertEqual(
-			niftycloud_fw.except_ip_permissions(ip_permissions_a, ip_permissions_b),
+			nifcloud_fw.except_ip_permissions(ip_permissions_a, ip_permissions_b),
 			[]
 		)
 
 	# describe present
 	def test_describe_security_group_present(self):
 		with mock.patch('requests.get', self.mockRequestsGetDescribeSecurityGroups):
-			(result, info) = niftycloud_fw.describe_security_group(self.mockModule, self.result['absent'])
+			(result, info) = nifcloud_fw.describe_security_group(self.mockModule, self.result['absent'])
 
 		self.assertEqual(result, dict(
 			created            = False,
@@ -750,7 +750,7 @@ class TestNiftycloud(unittest.TestCase):
 	# describe present description unicode
 	def test_describe_security_group_description_unicode(self):
 		with mock.patch('requests.get', self.mockRequestsGetDescribeSecurityGroupsDescriptionUnicode):
-			(result, info) = niftycloud_fw.describe_security_group(self.mockModule, self.result['absent'])
+			(result, info) = nifcloud_fw.describe_security_group(self.mockModule, self.result['absent'])
 
 		self.assertEqual(result, dict(
 			created            = False,
@@ -764,7 +764,7 @@ class TestNiftycloud(unittest.TestCase):
 	# describe present description none
 	def test_describe_security_group_description_none(self):
 		with mock.patch('requests.get', self.mockRequestsGetDescribeSecurityGroupsDescriptionNone):
-			(result, info) = niftycloud_fw.describe_security_group(self.mockModule, self.result['absent'])
+			(result, info) = nifcloud_fw.describe_security_group(self.mockModule, self.result['absent'])
 
 		self.assertEqual(result, dict(
 			created            = False,
@@ -778,7 +778,7 @@ class TestNiftycloud(unittest.TestCase):
 	# describe processing
 	def test_describe_security_group_processing(self):
 		with mock.patch('requests.get', self.mockRequestsGetDescribeSecurityGroupsProcessing):
-			(result, info) = niftycloud_fw.describe_security_group(self.mockModule, self.result['absent'])
+			(result, info) = nifcloud_fw.describe_security_group(self.mockModule, self.result['absent'])
 
 		self.assertEqual(result, dict(
 			created            = False,
@@ -790,7 +790,7 @@ class TestNiftycloud(unittest.TestCase):
 	# describe absent
 	def test_describe_security_group_absent(self):
 		with mock.patch('requests.get', self.mockRequestsGetDescribeSecurityGroupsNotFound):
-			(result, info) = niftycloud_fw.describe_security_group(self.mockModule, self.result['absent'])
+			(result, info) = nifcloud_fw.describe_security_group(self.mockModule, self.result['absent'])
 
 		self.assertEqual(result, dict(
 			created            = False,
@@ -802,7 +802,7 @@ class TestNiftycloud(unittest.TestCase):
 	# describe failed
 	def test_describe_security_group_failed(self):
 		with mock.patch('requests.get', self.mockRequestsInternalServerError):
-			(result, info) = niftycloud_fw.describe_security_group(self.mockModule, self.result['absent'])
+			(result, info) = nifcloud_fw.describe_security_group(self.mockModule, self.result['absent'])
 
 		self.assertEqual(result, dict(
 			created            = False,
@@ -813,39 +813,39 @@ class TestNiftycloud(unittest.TestCase):
 
 	# wait_for_processing success absent
 	def test_wait_for_processing_success_absent(self):
-		with mock.patch('niftycloud_fw.describe_security_group', self.mockNotFoundSecurityGroup):
-			(result, info) = niftycloud_fw.wait_for_processing(self.mockModule, self.result['absent'], 'absent')
+		with mock.patch('nifcloud_fw.describe_security_group', self.mockNotFoundSecurityGroup):
+			(result, info) = nifcloud_fw.wait_for_processing(self.mockModule, self.result['absent'], 'absent')
 
 		self.assertEqual(result, self.result['absent'])
 		self.assertIsNone(info)
 
 	# wait_for_processing success present
 	def test_wait_for_processing_success_present(self):
-		with mock.patch('niftycloud_fw.describe_security_group', self.mockDescribeSecurityGroup):
-			(result, info) = niftycloud_fw.wait_for_processing(self.mockModule, self.result['absent'], 'present')
+		with mock.patch('nifcloud_fw.describe_security_group', self.mockDescribeSecurityGroup):
+			(result, info) = nifcloud_fw.wait_for_processing(self.mockModule, self.result['absent'], 'present')
 
 		self.assertEqual(result, self.result['present'])
 		self.assertEqual(info,   self.security_group_info)
 
 	# wait_for_processing unmatch absent
 	def test_wait_for_processing_failed_absent(self):
-		with mock.patch('niftycloud_fw.describe_security_group', self.mockDescribeSecurityGroup):
+		with mock.patch('nifcloud_fw.describe_security_group', self.mockDescribeSecurityGroup):
 			with self.assertRaises(Exception) as cm:
-				(result, info) = niftycloud_fw.wait_for_processing(self.mockModule, self.result['absent'], 'absent')
+				(result, info) = nifcloud_fw.wait_for_processing(self.mockModule, self.result['absent'], 'absent')
 
 		self.assertEqual(cm.exception.message, 'failed')
 
 	# wait_for_processing unmatch present
 	def test_wait_for_processing_failed_present(self):
-		with mock.patch('niftycloud_fw.describe_security_group', self.mockNotFoundSecurityGroup):
+		with mock.patch('nifcloud_fw.describe_security_group', self.mockNotFoundSecurityGroup):
 			with self.assertRaises(Exception) as cm:
-				(result, info) = niftycloud_fw.wait_for_processing(self.mockModule, self.result['absent'], 'present')
+				(result, info) = nifcloud_fw.wait_for_processing(self.mockModule, self.result['absent'], 'present')
 
 		self.assertEqual(cm.exception.message, 'failed')
 
 	# create present  * do nothing
 	def test_create_security_group_skip(self):
-		(result, info) = niftycloud_fw.create_security_group(
+		(result, info) = nifcloud_fw.create_security_group(
 			self.mockModule,
 			self.result['present'],
 			self.security_group_info
@@ -857,8 +857,8 @@ class TestNiftycloud(unittest.TestCase):
 	# create success
 	def test_create_security_group_success(self):
 		with mock.patch('requests.post', self.mockRequestsPostCreateSecurityGroup):
-			with mock.patch('niftycloud_fw.describe_security_group', self.mockDescribeSecurityGroup):
-				(result, info) = niftycloud_fw.create_security_group(
+			with mock.patch('nifcloud_fw.describe_security_group', self.mockDescribeSecurityGroup):
+				(result, info) = nifcloud_fw.create_security_group(
 					self.mockModule,
 					self.result['absent'],
 					None
@@ -874,9 +874,9 @@ class TestNiftycloud(unittest.TestCase):
 	# create failed
 	def test_create_security_group_failed(self):
 		with mock.patch('requests.post', self.mockRequestsPostCreateSecurityGroup):
-			with mock.patch('niftycloud_fw.describe_security_group', self.mockNotFoundSecurityGroup):
+			with mock.patch('nifcloud_fw.describe_security_group', self.mockNotFoundSecurityGroup):
 				with self.assertRaises(Exception) as cm:
-					niftycloud_fw.create_security_group(
+					nifcloud_fw.create_security_group(
 						self.mockModule,
 						self.result['absent'],
 						None
@@ -887,7 +887,7 @@ class TestNiftycloud(unittest.TestCase):
 	def test_create_security_group_request_failed(self):
 		with mock.patch('requests.post', self.mockRequestsInternalServerError):
 			with self.assertRaises(Exception) as cm:
-				niftycloud_fw.create_security_group(
+				nifcloud_fw.create_security_group(
 					self.mockModule,
 					self.result['absent'],
 					None
@@ -902,8 +902,8 @@ class TestNiftycloud(unittest.TestCase):
 		)
 
 		with mock.patch('requests.post', self.mockRequestsPostUpdateSecurityGroup):
-			with mock.patch('niftycloud_fw.describe_security_group', self.mockDescribeSecurityGroup):
-				(result, info) = niftycloud_fw.update_security_group_attribute(
+			with mock.patch('nifcloud_fw.describe_security_group', self.mockDescribeSecurityGroup):
+				(result, info) = nifcloud_fw.update_security_group_attribute(
 					self.mockModule,
 					self.result['present'],
 					self.security_group_info,
@@ -920,7 +920,7 @@ class TestNiftycloud(unittest.TestCase):
 			GroupDescriptionUpdate = self.mockModule.params['description'],
 		)
 
-		(result, info) = niftycloud_fw.update_security_group_attribute(
+		(result, info) = nifcloud_fw.update_security_group_attribute(
 			self.mockModule,
 			self.result['absent'],
 			None,
@@ -938,9 +938,9 @@ class TestNiftycloud(unittest.TestCase):
 		)
 
 		with mock.patch('requests.post', self.mockRequestsPostUpdateSecurityGroup):
-			with mock.patch('niftycloud_fw.describe_security_group', self.mockNotFoundSecurityGroup):
+			with mock.patch('nifcloud_fw.describe_security_group', self.mockNotFoundSecurityGroup):
 				with self.assertRaises(Exception) as cm:
-					(result, info) = niftycloud_fw.update_security_group_attribute(
+					(result, info) = nifcloud_fw.update_security_group_attribute(
 						self.mockModule,
 						self.result['present'],
 						self.security_group_info,
@@ -957,7 +957,7 @@ class TestNiftycloud(unittest.TestCase):
 
 		with mock.patch('requests.post', self.mockRequestsInternalServerError):
 			with self.assertRaises(Exception) as cm:
-				(result, info) = niftycloud_fw.update_security_group_attribute(
+				(result, info) = nifcloud_fw.update_security_group_attribute(
 					self.mockModule,
 					self.result['present'],
 					self.security_group_info,
@@ -977,8 +977,8 @@ class TestNiftycloud(unittest.TestCase):
 				changed_security_group_info,
 			))
 
-		with mock.patch('niftycloud_fw.update_security_group_attribute', mock_describe_security_group):
-			(result, info) = niftycloud_fw.update_security_group_description(
+		with mock.patch('nifcloud_fw.update_security_group_attribute', mock_describe_security_group):
+			(result, info) = nifcloud_fw.update_security_group_description(
 				self.mockModule,
 				self.result['present'],
 				self.security_group_info
@@ -995,7 +995,7 @@ class TestNiftycloud(unittest.TestCase):
 
 	# update description absent  * do nothing
 	def test_update_security_group_description_absent(self):
-		(result, info) = niftycloud_fw.update_security_group_description(
+		(result, info) = nifcloud_fw.update_security_group_description(
 			self.mockModule,
 			self.result['absent'],
 			None
@@ -1017,7 +1017,7 @@ class TestNiftycloud(unittest.TestCase):
 			)
                 )
 
-		(result, info) = niftycloud_fw.update_security_group_description(
+		(result, info) = nifcloud_fw.update_security_group_description(
 			mock_module,
 			self.result['present'],
 			security_group_info
@@ -1033,7 +1033,7 @@ class TestNiftycloud(unittest.TestCase):
 			description = self.mockModule.params['description'],
 		)
 
-		(result, info) = niftycloud_fw.update_security_group_description(
+		(result, info) = nifcloud_fw.update_security_group_description(
 			self.mockModule,
 			self.result['present'],
 			changed_security_group_info
@@ -1044,9 +1044,9 @@ class TestNiftycloud(unittest.TestCase):
 
 	# update description failed
 	def test_update_security_group_description_failed(self):
-		with mock.patch('niftycloud_fw.update_security_group_attribute', self.mockDescribeSecurityGroup):
+		with mock.patch('nifcloud_fw.update_security_group_attribute', self.mockDescribeSecurityGroup):
 			with self.assertRaises(Exception) as cm:
-				(result, info) = niftycloud_fw.update_security_group_description(
+				(result, info) = nifcloud_fw.update_security_group_description(
 					self.mockModule,
 					self.result['present'],
 					self.security_group_info
@@ -1065,8 +1065,8 @@ class TestNiftycloud(unittest.TestCase):
 				changed_security_group_info,
 			))
 
-		with mock.patch('niftycloud_fw.update_security_group_attribute', mock_describe_security_group):
-			(result, info) = niftycloud_fw.update_security_group_log_limit(
+		with mock.patch('nifcloud_fw.update_security_group_attribute', mock_describe_security_group):
+			(result, info) = nifcloud_fw.update_security_group_log_limit(
 				self.mockModule,
 				self.result['present'],
 				self.security_group_info
@@ -1083,7 +1083,7 @@ class TestNiftycloud(unittest.TestCase):
 
 	# update log_limit absent  * do nothing
 	def test_update_security_group_log_limit_absent(self):
-		(result, info) = niftycloud_fw.update_security_group_log_limit(
+		(result, info) = nifcloud_fw.update_security_group_log_limit(
 			self.mockModule,
 			self.result['absent'],
 			None
@@ -1105,7 +1105,7 @@ class TestNiftycloud(unittest.TestCase):
 			)
                 )
 
-		(result, info) = niftycloud_fw.update_security_group_log_limit(
+		(result, info) = nifcloud_fw.update_security_group_log_limit(
 			mock_module,
 			self.result['present'],
 			security_group_info
@@ -1121,7 +1121,7 @@ class TestNiftycloud(unittest.TestCase):
 			log_limit = self.mockModule.params['log_limit'],
 		)
 
-		(result, info) = niftycloud_fw.update_security_group_log_limit(
+		(result, info) = nifcloud_fw.update_security_group_log_limit(
 			self.mockModule,
 			self.result['present'],
 			changed_security_group_info
@@ -1132,9 +1132,9 @@ class TestNiftycloud(unittest.TestCase):
 
 	# update log_limit failed
 	def test_update_security_group_log_limit_failed(self):
-		with mock.patch('niftycloud_fw.update_security_group_attribute', self.mockDescribeSecurityGroup):
+		with mock.patch('nifcloud_fw.update_security_group_attribute', self.mockDescribeSecurityGroup):
 			with self.assertRaises(Exception) as cm:
-				(result, info) = niftycloud_fw.update_security_group_log_limit(
+				(result, info) = nifcloud_fw.update_security_group_log_limit(
 					self.mockModule,
 					self.result['present'],
 					self.security_group_info
@@ -1143,9 +1143,9 @@ class TestNiftycloud(unittest.TestCase):
 
 	# update
 	def test_update_security_group(self):
-		with mock.patch('niftycloud_fw.update_security_group_description', self.mockDescribeSecurityGroup):
-			with mock.patch('niftycloud_fw.update_security_group_log_limit', self.mockDescribeSecurityGroup):
-				(result, info) = niftycloud_fw.update_security_group(
+		with mock.patch('nifcloud_fw.update_security_group_description', self.mockDescribeSecurityGroup):
+			with mock.patch('nifcloud_fw.update_security_group_log_limit', self.mockDescribeSecurityGroup):
+				(result, info) = nifcloud_fw.update_security_group(
 					self.mockModule,
 					self.result['present'],
 					self.security_group_info
@@ -1156,7 +1156,7 @@ class TestNiftycloud(unittest.TestCase):
 
 	# update absent  * do nothing
 	def test_update_security_group_absent(self):
-		(result, info) = niftycloud_fw.update_security_group(
+		(result, info) = nifcloud_fw.update_security_group(
 			self.mockModule,
 			self.result['absent'],
 			None
@@ -1180,8 +1180,8 @@ class TestNiftycloud(unittest.TestCase):
 			))
 
 		with mock.patch('requests.post', self.mockRequestsPostAuthorizeSecurityGroup):
-			with mock.patch('niftycloud_fw.describe_security_group', mock_describe_security_group):
-				(result, info) = niftycloud_fw.authorize_security_group(
+			with mock.patch('nifcloud_fw.describe_security_group', mock_describe_security_group):
+				(result, info) = nifcloud_fw.authorize_security_group(
 					self.mockModule,
 					self.result['present'],
 					self.security_group_info
@@ -1203,7 +1203,7 @@ class TestNiftycloud(unittest.TestCase):
 			ip_permissions = self.mockModule.params['ip_permissions'],
 		)
 
-		(result, info) = niftycloud_fw.authorize_security_group(
+		(result, info) = nifcloud_fw.authorize_security_group(
 			self.mockModule,
 			self.result['present'],
 			changed_security_group_info
@@ -1214,7 +1214,7 @@ class TestNiftycloud(unittest.TestCase):
 
 	# authorize absent  * do nothing
 	def test_authorize_security_group_absent(self):
-		(result, info) = niftycloud_fw.authorize_security_group(
+		(result, info) = nifcloud_fw.authorize_security_group(
 			self.mockModule,
 			self.result['absent'],
 			None
@@ -1226,9 +1226,9 @@ class TestNiftycloud(unittest.TestCase):
 	# authorize failed
 	def test_authorize_security_group_failed(self):
 		with mock.patch('requests.post', self.mockRequestsPostAuthorizeSecurityGroup):
-			with mock.patch('niftycloud_fw.describe_security_group', self.mockDescribeSecurityGroup):
+			with mock.patch('nifcloud_fw.describe_security_group', self.mockDescribeSecurityGroup):
 				with self.assertRaises(Exception) as cm:
-					niftycloud_fw.authorize_security_group(
+					nifcloud_fw.authorize_security_group(
 						self.mockModule,
 						self.result['present'],
 						self.security_group_info
@@ -1239,7 +1239,7 @@ class TestNiftycloud(unittest.TestCase):
 	def test_authorize_security_group_request_failed(self):
 		with mock.patch('requests.post', self.mockRequestsInternalServerError):
 			with self.assertRaises(Exception) as cm:
-				(result, info) = niftycloud_fw.authorize_security_group(
+				(result, info) = nifcloud_fw.authorize_security_group(
 					self.mockModule,
 					self.result['present'],
 					self.security_group_info
@@ -1265,8 +1265,8 @@ class TestNiftycloud(unittest.TestCase):
 			))
 
 		with mock.patch('requests.post', self.mockRequestsPostRevokeSecurityGroup):
-			with mock.patch('niftycloud_fw.describe_security_group', mock_describe_security_group):
-				(result, info) = niftycloud_fw.revoke_security_group(
+			with mock.patch('nifcloud_fw.describe_security_group', mock_describe_security_group):
+				(result, info) = nifcloud_fw.revoke_security_group(
 					self.mockModule,
 					self.result['present'],
 					security_group_info
@@ -1288,7 +1288,7 @@ class TestNiftycloud(unittest.TestCase):
 			ip_permissions = self.mockModule.params['ip_permissions'],
 		)
 
-		(result, info) = niftycloud_fw.revoke_security_group(
+		(result, info) = nifcloud_fw.revoke_security_group(
 			self.mockModule,
 			self.result['present'],
 			security_group_info
@@ -1308,7 +1308,7 @@ class TestNiftycloud(unittest.TestCase):
 		mock_ip_permissions_removed.params['ip_permissions'] = []
 		mock_ip_permissions_removed.params['purge_ip_permissions'] = False
 
-		(result, info) = niftycloud_fw.revoke_security_group(
+		(result, info) = nifcloud_fw.revoke_security_group(
 			mock_ip_permissions_removed,
 			self.result['present'],
 			security_group_info
@@ -1318,7 +1318,7 @@ class TestNiftycloud(unittest.TestCase):
 
 	# revoke absent  * do nothing
 	def test_revoke_security_group_absent(self):
-		(result, info) = niftycloud_fw.revoke_security_group(
+		(result, info) = nifcloud_fw.revoke_security_group(
 			self.mockModule,
 			self.result['absent'],
 			None
@@ -1330,9 +1330,9 @@ class TestNiftycloud(unittest.TestCase):
 	# revoke failed
 	def test_revoke_security_group_failed(self):
 		with mock.patch('requests.post', self.mockRequestsPostRevokeSecurityGroup):
-			with mock.patch('niftycloud_fw.describe_security_group', self.mockDescribeSecurityGroup):
+			with mock.patch('nifcloud_fw.describe_security_group', self.mockDescribeSecurityGroup):
 				with self.assertRaises(Exception) as cm:
-					niftycloud_fw.revoke_security_group(
+					nifcloud_fw.revoke_security_group(
 						self.mockModule,
 						self.result['present'],
 						self.security_group_info
@@ -1343,7 +1343,7 @@ class TestNiftycloud(unittest.TestCase):
 	def test_revoke_security_group_request_failed(self):
 		with mock.patch('requests.post', self.mockRequestsInternalServerError):
 			with self.assertRaises(Exception) as cm:
-				(result, info) = niftycloud_fw.revoke_security_group(
+				(result, info) = nifcloud_fw.revoke_security_group(
 					self.mockModule,
 					self.result['present'],
 					self.security_group_info
@@ -1352,34 +1352,34 @@ class TestNiftycloud(unittest.TestCase):
 
 	# run success (absent - create -> present - other action -> present)
 	def test_run_success_absent(self):
-		with mock.patch('niftycloud_fw.describe_security_group', self.mockNotFoundSecurityGroup):
-			with mock.patch('niftycloud_fw.create_security_group', self.mockDescribeSecurityGroup):
-				with mock.patch('niftycloud_fw.update_security_group', self.mockDescribeSecurityGroup):
-					with mock.patch('niftycloud_fw.authorize_security_group', self.mockDescribeSecurityGroup):
-						with mock.patch('niftycloud_fw.revoke_security_group', self.mockDescribeSecurityGroup):
+		with mock.patch('nifcloud_fw.describe_security_group', self.mockNotFoundSecurityGroup):
+			with mock.patch('nifcloud_fw.create_security_group', self.mockDescribeSecurityGroup):
+				with mock.patch('nifcloud_fw.update_security_group', self.mockDescribeSecurityGroup):
+					with mock.patch('nifcloud_fw.authorize_security_group', self.mockDescribeSecurityGroup):
+						with mock.patch('nifcloud_fw.revoke_security_group', self.mockDescribeSecurityGroup):
 							with self.assertRaises(Exception) as cm:
-								niftycloud_fw.run(self.mockModule)
+								nifcloud_fw.run(self.mockModule)
 		self.assertEqual(cm.exception.message, 'success')
 
 	# run success (present - create skip -> present - other action -> present)
 	def test_run_success_present(self):
-		with mock.patch('niftycloud_fw.describe_security_group', self.mockDescribeSecurityGroup):
-			with mock.patch('niftycloud_fw.update_security_group', self.mockDescribeSecurityGroup):
-				with mock.patch('niftycloud_fw.authorize_security_group', self.mockDescribeSecurityGroup):
-					with mock.patch('niftycloud_fw.revoke_security_group', self.mockDescribeSecurityGroup):
+		with mock.patch('nifcloud_fw.describe_security_group', self.mockDescribeSecurityGroup):
+			with mock.patch('nifcloud_fw.update_security_group', self.mockDescribeSecurityGroup):
+				with mock.patch('nifcloud_fw.authorize_security_group', self.mockDescribeSecurityGroup):
+					with mock.patch('nifcloud_fw.revoke_security_group', self.mockDescribeSecurityGroup):
 						with self.assertRaises(Exception) as cm:
-								niftycloud_fw.run(self.mockModule)
+								nifcloud_fw.run(self.mockModule)
 		self.assertEqual(cm.exception.message, 'success')
 
 	# run failed (absent - create -> absent - skip other action -> absent)
 	def test_run_failed(self):
-		with mock.patch('niftycloud_fw.describe_security_group', self.mockNotFoundSecurityGroup):
-			with mock.patch('niftycloud_fw.create_security_group', self.mockNotFoundSecurityGroup):
+		with mock.patch('nifcloud_fw.describe_security_group', self.mockNotFoundSecurityGroup):
+			with mock.patch('nifcloud_fw.create_security_group', self.mockNotFoundSecurityGroup):
 				with self.assertRaises(Exception) as cm:
-					niftycloud_fw.run(self.mockModule)
+					nifcloud_fw.run(self.mockModule)
 		self.assertEqual(cm.exception.message, 'failed')
 
-niftycloud_api_response_sample = dict(
+nifcloud_api_response_sample = dict(
 	describeSecurityGroups = '''
 <DescribeSecurityGroupsResponse xmlns="https://cp.cloud.nifty.com/api/">
  <RequestID>5ec8da0a-6e23-4343-b474-ca0bb5c22a51</RequestID>

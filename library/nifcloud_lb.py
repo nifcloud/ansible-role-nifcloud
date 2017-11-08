@@ -27,10 +27,10 @@ from ansible.module_utils.basic import *  # noqa
 
 DOCUMENTATION = '''
 ---
-module: niftycloud_lb
-short_description: De-registers or registers an instance from Load Balancer in NIFTY Cloud
+module: nifcloud_lb
+short_description: De-registers or registers an instance from Load Balancer in NIFCLOUD
 description:
-    - De-registers or registers an instance of NIFTY Cloud from Load Balancer.
+    - De-registers or registers an instance of NIFCLOUD from Load Balancer.
 version_added: "0.1"
 options:
     access_key:
@@ -71,7 +71,7 @@ options:
 '''  # noqa
 
 EXAMPLES = '''
-- action: niftycloud_lb access_key="YOUR_ACCESS_KEY" secret_access_key="YOUR_SECRET_ACCESS_KEY" endpoint="west-1.cp.cloud.nifty.com" instance_id="test001" instance_port=80 loadbalancer_name="lb001" loadbalancer_port=80 state="present"
+- action: nifcloud_lb access_key="YOUR_ACCESS_KEY" secret_access_key="YOUR_SECRET_ACCESS_KEY" endpoint="west-1.cp.cloud.nifty.com" instance_id="test001" instance_port=80 loadbalancer_name="lb001" loadbalancer_port=80 state="present"
 '''  # noqa
 
 

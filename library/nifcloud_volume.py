@@ -28,10 +28,10 @@ from ansible.module_utils.basic import *  # noqa
 
 DOCUMENTATION = '''
 ---
-module: niftycloud_volume
-short_description: Attach the volume to an instance in NIFTY Cloud
+module: nifcloud_volume
+short_description: Attach the volume to an instance in NIFCLOUD
 description:
-    - Attach the volume an instance of NIFTY Cloud.
+    - Attach the volume an instance of NIFCLOUD.
 version_added: "0.1"
 options:
     access_key:
@@ -76,7 +76,7 @@ options:
 '''  # noqa
 
 EXAMPLES = '''
-- action: niftycloud_lb access_key="YOUR_ACCESS_KEY" secret_access_key="YOUR_SECRET_ACCESS_KEY" endpoint="west-1.cp.cloud.nifty.com" size="100" volume_id="testdisk001" disk_type="3" instance_id="test001" accounting_type="2" state="present"
+- action: nifcloud_lb access_key="YOUR_ACCESS_KEY" secret_access_key="YOUR_SECRET_ACCESS_KEY" endpoint="west-1.cp.cloud.nifty.com" size="100" volume_id="testdisk001" disk_type="3" instance_id="test001" accounting_type="2" state="present"
 '''  # noqa
 
 
