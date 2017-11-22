@@ -12,290 +12,318 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
+
 import sys
+import unittest
+import xml.etree.ElementTree as etree
+
+import mock
+import nifcloud_volume
+
 sys.path.append('.')
 sys.path.append('..')
 
-import unittest
-import mock
-import nifcloud_volume
-import xml.etree.ElementTree as etree
-import urllib, hmac, hashlib, base64
 
 class TestNifcloud(unittest.TestCase):
-	def setUp(self):
-		self.mockModule = mock.MagicMock(
-			params = dict(
-				access_key = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789',
-				secret_access_key = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789',
-				endpoint   = 'west-1.cp.cloud.nifty.com',
-				size = '100',
-				volume_id = 'disk01',
-				disk_type = '3',
-				instance_id = 'test001',
-				accounting_type = '2',
-				state = 'present'
-			),
-			fail_json = mock.MagicMock(side_effect=Exception('failed'))
-		)
+    def setUp(self):
+        self.mockModule = mock.MagicMock(
+            params=dict(
+                access_key='ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789',
+                secret_access_key='ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789',
+                endpoint='west-1.cp.cloud.nifty.com',
+                size='100',
+                volume_id='disk01',
+                disk_type='3',
+                instance_id='test001',
+                accounting_type='2',
+                state='present'
+            ),
+            fail_json=mock.MagicMock(side_effect=Exception('failed'))
+        )
 
-		self.xmlnamespace = 'https://cp.cloud.nifty.com/api/'
-		self.xml = nifcloud_api_response_sample
+        self.xmlnamespace = 'https://cp.cloud.nifty.com/api/'
+        self.xml = nifcloud_api_response_sample
 
-		self.mockRequestsGetDescribeVolumes = mock.MagicMock(
-			return_value=mock.MagicMock(
-				status_code = 200,
-				text = self.xml['describeVolumes']
-			))
+        self.mockRequestsGetDescribeVolumes = mock.MagicMock(
+            return_value=mock.MagicMock(
+                status_code=200,
+                text=self.xml['describeVolumes']
+            ))
 
-		self.mockRequestsGetCreateVolume = mock.MagicMock(
-			return_value=mock.MagicMock(
-				status_code = 200,
-				text = self.xml['createVolume']
-			))
+        self.mockRequestsGetCreateVolume = mock.MagicMock(
+            return_value=mock.MagicMock(
+                status_code=200,
+                text=self.xml['createVolume']
+            ))
 
-		self.mockRequestsGetAttachVolume = mock.MagicMock(
-			return_value=mock.MagicMock(
-				status_code = 200,
-				text = self.xml['attachVolume']
-			))
+        self.mockRequestsGetAttachVolume = mock.MagicMock(
+            return_value=mock.MagicMock(
+                status_code=200,
+                text=self.xml['attachVolume']
+            ))
 
-		self.mockRequestsInternalServerError = mock.MagicMock(
-			return_value=mock.MagicMock(
-				status_code = 500,
-				text = self.xml['internalServerError']
-			))
+        self.mockRequestsInternalServerError = mock.MagicMock(
+            return_value=mock.MagicMock(
+                status_code=500,
+                text=self.xml['internalServerError']
+            ))
 
-		self.mockRequestsError = mock.MagicMock(return_value=None)
+        self.mockRequestsError = mock.MagicMock(return_value=None)
 
-		patcher = mock.patch('time.sleep')
-		self.addCleanup(patcher.stop)
-		self.mock_time_sleep = patcher.start()
-			
-	# calculate signature
-	def test_calculate_signature(self):
-		secret_access_key = self.mockModule.params['secret_access_key']
-		method = 'GET'
-		endpoint = self.mockModule.params['endpoint']
-		path = '/api/'
-		params = dict(
-			Action = 'DescribeInstances',
-			AccessKeyId = self.mockModule.params['access_key'],
-			SignatureMethod = 'HmacSHA256',
-			SignatureVersion = '2',
-			InstanceId = self.mockModule.params['instance_id']
-		)
+        patcher = mock.patch('time.sleep')
+        self.addCleanup(patcher.stop)
+        self.mock_time_sleep = patcher.start()
 
-		signature = nifcloud_volume.calculate_signature(secret_access_key, method, endpoint, path, params)
-		self.assertEqual(signature, 'Y7/0nc3dCK9UNkp+w5sh08ybJLQjh69mXOgcxJijDEU=')
+    # calculate signature
+    def test_calculate_signature(self):
+        secret_access_key = self.mockModule.params['secret_access_key']
+        method = 'GET'
+        endpoint = self.mockModule.params['endpoint']
+        path = '/api/'
+        params = dict(
+            Action='DescribeInstances',
+            AccessKeyId=self.mockModule.params['access_key'],
+            SignatureMethod='HmacSHA256',
+            SignatureVersion='2',
+            InstanceId=self.mockModule.params['instance_id']
+        )
 
-	# calculate signature with string parameter including slash
-	def test_calculate_signature_with_slash(self):
-		secret_access_key = self.mockModule.params['secret_access_key']
-		method = 'GET'
-		endpoint = self.mockModule.params['endpoint']
-		path = '/api/'
-		params = dict(
-			Action = 'DescribeInstances',
-			AccessKeyId = self.mockModule.params['access_key'],
-			SignatureMethod = 'HmacSHA256',
-			SignatureVersion = '2',
-			InstanceId = self.mockModule.params['instance_id'],
-			Description = '/'
-		)
+        signature = nifcloud_volume.calculate_signature(
+            secret_access_key,
+            method,
+            endpoint,
+            path,
+            params
+        )
+        self.assertEqual(signature,
+                         'Y7/0nc3dCK9UNkp+w5sh08ybJLQjh69mXOgcxJijDEU=')
 
-		signature = nifcloud_volume.calculate_signature(secret_access_key, method, endpoint, path, params)
+    # calculate signature with string parameter including slash
+    def test_calculate_signature_with_slash(self):
+        secret_access_key = self.mockModule.params['secret_access_key']
+        method = 'GET'
+        endpoint = self.mockModule.params['endpoint']
+        path = '/api/'
+        params = dict(
+            Action='DescribeInstances',
+            AccessKeyId=self.mockModule.params['access_key'],
+            SignatureMethod='HmacSHA256',
+            SignatureVersion='2',
+            InstanceId=self.mockModule.params['instance_id'],
+            Description='/'
+        )
 
-		# This constant string is signature calculated by "library/tests/files/calculate_signature_sample.sh".
-		# This shell-script calculate with encoding a slash, like "nifcloud.calculate_signature()".
-		self.assertEqual(signature, 'dHOoGcBgO14Roaioryic9IdFPg7G+lihZ8Wyoa25ok4=')
+        signature = nifcloud_volume.calculate_signature(
+            secret_access_key,
+            method,
+            endpoint,
+            path,
+            params
+        )
 
-	# method get
-	def test_request_to_api_get(self):
-		method = 'GET'
-		action = 'DescribeVolumes'
-		params = dict(
-			InstanceId = self.mockModule.params['instance_id']
-		)
+        # This constant string is signature calculated by
+        # "library/tests/files/calculate_signature_sample.sh".
+        # This shell-script calculate with encoding a slash,
+        # like "nifcloud.calculate_signature()".
+        self.assertEqual(signature,
+                         'dHOoGcBgO14Roaioryic9IdFPg7G+lihZ8Wyoa25ok4=')
 
-		with mock.patch('requests.get', self.mockRequestsGetDescribeVolumes):
-			info = nifcloud_volume.request_to_api(self.mockModule, method, action, params)
+    # method get
+    def test_request_to_api_get(self):
+        method = 'GET'
+        action = 'DescribeVolumes'
+        params = dict(
+            InstanceId=self.mockModule.params['instance_id']
+        )
 
-		self.assertEqual(info['status'], 200)
-		self.assertEqual(info['xml_namespace'], dict(nc = self.xmlnamespace))
-		self.assertEqual(etree.tostring(info['xml_body']),
-				 etree.tostring(etree.fromstring(self.xml['describeVolumes'])))
+        with mock.patch('requests.get', self.mockRequestsGetDescribeVolumes):
+            info = nifcloud_volume.request_to_api(self.mockModule, method,
+                                                  action, params)
 
-	# api error
-	def test_request_to_api_error(self):
-		method = 'GET'
-		action = 'DescribeVolumes'
-		params = dict(
-			InstanceId = self.mockModule.params['instance_id']
-		)
+        self.assertEqual(info['status'], 200)
+        self.assertEqual(info['xml_namespace'], dict(nc=self.xmlnamespace))
+        self.assertEqual(
+            etree.tostring(info['xml_body']),
+            etree.tostring(etree.fromstring(self.xml['describeVolumes']))
+        )
 
-		with mock.patch('requests.get', self.mockRequestsInternalServerError):
-			info = nifcloud_volume.request_to_api(self.mockModule, method, action, params)
+    # api error
+    def test_request_to_api_error(self):
+        method = 'GET'
+        action = 'DescribeVolumes'
+        params = dict(
+            InstanceId=self.mockModule.params['instance_id']
+        )
 
-		self.assertEqual(info['status'], 500)
-		self.assertEqual(etree.tostring(info['xml_body']),
-				 etree.tostring(etree.fromstring(self.xml['internalServerError'])))
+        with mock.patch('requests.get', self.mockRequestsInternalServerError):
+            info = nifcloud_volume.request_to_api(self.mockModule, method,
+                                                  action, params)
 
-	# method failed
-	def test_request_to_api_unknown(self):
-		method = 'UNKNOWN'
-		action = 'DescribeVolumes'
-		params = dict(
-			InstanceId = self.mockModule.params['instance_id']
-		)
+        self.assertEqual(info['status'], 500)
+        self.assertEqual(
+            etree.tostring(info['xml_body']),
+            etree.tostring(etree.fromstring(self.xml['internalServerError']))
+        )
 
-		self.assertRaises(
-			Exception,
-			nifcloud_volume.request_to_api,
-			(self.mockModule, method, action, params)
-		)
+    # method failed
+    def test_request_to_api_unknown(self):
+        method = 'UNKNOWN'
+        action = 'DescribeVolumes'
+        params = dict(
+            InstanceId=self.mockModule.params['instance_id']
+        )
 
-	# network error
-	def test_request_to_api_request_error(self):
-		method = 'GET'
-		action = 'DescribeVolumes'
-		params = dict(
-			InstanceId = self.mockModule.params['instance_id']
-		)
+        self.assertRaises(
+            Exception,
+            nifcloud_volume.request_to_api,
+            (self.mockModule, method, action, params)
+        )
 
-		with mock.patch('requests.get', self.mockRequestsError):
-			self.assertRaises(
-				Exception,
-				nifcloud_volume.request_to_api,
-				(self.mockModule, method, action, params)
-			)
+    # network error
+    def test_request_to_api_request_error(self):
+        method = 'GET'
+        action = 'DescribeVolumes'
+        params = dict(
+            InstanceId=self.mockModule.params['instance_id']
+        )
 
-	# get api error code & message
-	def test_get_api_error(self):
-		method = 'GET'
-		action = 'DescribeVolumes'
-		params = dict(
-			InstanceId = self.mockModule.params['instance_id']
-		)
+        with mock.patch('requests.get', self.mockRequestsError):
+            self.assertRaises(
+                Exception,
+                nifcloud_volume.request_to_api,
+                (self.mockModule, method, action, params)
+            )
 
-		with mock.patch('requests.get', self.mockRequestsInternalServerError):
-			info = nifcloud_volume.request_to_api(self.mockModule, method, action, params)
+    # get api error code & message
+    def test_get_api_error(self):
+        method = 'GET'
+        action = 'DescribeVolumes'
+        params = dict(
+            InstanceId=self.mockModule.params['instance_id']
+        )
 
-		error_info = nifcloud_volume.get_api_error(info['xml_body'])
-		self.assertEqual(error_info['code'],    'Server.InternalError')
-		self.assertEqual(error_info['message'], 'An error has occurred. Please try again later.')
+        with mock.patch('requests.get', self.mockRequestsInternalServerError):
+            info = nifcloud_volume.request_to_api(self.mockModule, method,
+                                                  action, params)
 
-	# get volume state present
-	def test_get_volume_state_present(self):
-		with mock.patch('requests.get', self.mockRequestsGetDescribeVolumes):
-			self.assertEqual(
-				('attached', 'test001'),
-				nifcloud_volume.get_volume_state(self.mockModule)
-			)
+        error_info = nifcloud_volume.get_api_error(info['xml_body'])
+        self.assertEqual(error_info['code'],    'Server.InternalError')
+        self.assertEqual(error_info['message'],
+                         'An error has occurred. Please try again later.')
 
-	# get volume state (volume_id not set)
-	def test_get_volume_state_absent(self):
-		with mock.patch('requests.get', self.mockRequestsGetDescribeVolumes):
-			self.mockModule.params['volume_id'] = None
-			self.assertEqual(
-				('absent', None),
-				nifcloud_volume.get_volume_state(self.mockModule)
-			)
+    # get volume state present
+    def test_get_volume_state_present(self):
+        with mock.patch('requests.get', self.mockRequestsGetDescribeVolumes):
+            self.assertEqual(
+                ('attached', 'test001'),
+                nifcloud_volume.get_volume_state(self.mockModule)
+            )
 
-	# get volume state error
-	def test_get_volume_state_error(self):
-		with mock.patch('nifcloud_volume.request_to_api',
-				self.mockRequestsInternalServerError):
-			self.assertEqual(
-				('absent', None),
-				nifcloud_volume.get_volume_state(self.mockModule)
-			)
+    # get volume state (volume_id not set)
+    def test_get_volume_state_absent(self):
+        with mock.patch('requests.get', self.mockRequestsGetDescribeVolumes):
+            self.mockModule.params['volume_id'] = None
+            self.assertEqual(
+                ('absent', None),
+                nifcloud_volume.get_volume_state(self.mockModule)
+            )
 
-	# create volume success
-	def test_create_volume_success(self):
-		with mock.patch('nifcloud_volume.get_volume_state',
-				mock.MagicMock(return_value=('attached', 'test001'))):
-			with mock.patch('requests.get',
-					self.mockRequestsGetCreateVolume):
-				self.assertEqual(
-					(True, 'created'),
-					nifcloud_volume.create_volume(self.mockModule)
-				)
+    # get volume state error
+    def test_get_volume_state_error(self):
+        with mock.patch('nifcloud_volume.request_to_api',
+                        self.mockRequestsInternalServerError):
+            self.assertEqual(
+                ('absent', None),
+                nifcloud_volume.get_volume_state(self.mockModule)
+            )
 
-	# create volume failed
-	def test_create_volume_failed(self):
-		with mock.patch('nifcloud_volume.get_volume_state',
-				mock.MagicMock(return_value=('attached', 'test001'))):
-			with mock.patch('requests.get',
-					self.mockRequestsInternalServerError):
-				self.assertRaises(
-					Exception,
-					nifcloud_volume.create_volume,
-					(self.mockModule)
-				)
+    # create volume success
+    def test_create_volume_success(self):
+        with mock.patch('nifcloud_volume.get_volume_state',
+                        mock.MagicMock(return_value=('attached', 'test001'))):
+            with mock.patch('requests.get',
+                            self.mockRequestsGetCreateVolume):
+                self.assertEqual(
+                    (True, 'created'),
+                    nifcloud_volume.create_volume(self.mockModule)
+                )
 
-	# attach volume absent (with create failed)
-	def test_attach_volume_absent(self):
-		with mock.patch('nifcloud_volume.get_volume_state',
-				mock.MagicMock(return_value=('absent', 'test001'))):
-			with mock.patch('requests.get', self.mockRequestsInternalServerError):
-				self.assertRaises(
-					Exception,
-					nifcloud_volume.attach_volume,
-					(self.mockModule)
-				)
+    # create volume failed
+    def test_create_volume_failed(self):
+        with mock.patch('nifcloud_volume.get_volume_state',
+                        mock.MagicMock(return_value=('attached', 'test001'))):
+            with mock.patch('requests.get',
+                            self.mockRequestsInternalServerError):
+                self.assertRaises(
+                    Exception,
+                    nifcloud_volume.create_volume,
+                    (self.mockModule)
+                )
 
-	# attach volume success
-	def test_attach_volume_success(self):
-		with mock.patch('nifcloud_volume.get_volume_state',
-				mock.MagicMock(return_value=('available', 'test001'))):
-			with mock.patch('requests.get', self.mockRequestsGetAttachVolume):
-				self.assertEqual(
-					(True, 'attached'),
-					nifcloud_volume.attach_volume(self.mockModule)
-				)
+    # attach volume absent (with create failed)
+    def test_attach_volume_absent(self):
+        with mock.patch('nifcloud_volume.get_volume_state',
+                        mock.MagicMock(return_value=('absent', 'test001'))):
+            with mock.patch('requests.get',
+                            self.mockRequestsInternalServerError):
+                self.assertRaises(
+                    Exception,
+                    nifcloud_volume.attach_volume,
+                    (self.mockModule)
+                )
 
-	# attach volume error
-	def test_attach_volume_failed(self):
-		with mock.patch('nifcloud_volume.get_volume_state',
-				mock.MagicMock(return_value=('detached', 'test001'))):
-			with mock.patch('requests.get', self.mockRequestsInternalServerError):
-				self.assertRaises(
-					Exception,
-					nifcloud_volume.attach_volume,
-					(self.mockModule)
-				)
+    # attach volume success
+    def test_attach_volume_success(self):
+        with mock.patch('nifcloud_volume.get_volume_state',
+                        mock.MagicMock(return_value=('available', 'test001'))):
+            with mock.patch('requests.get', self.mockRequestsGetAttachVolume):
+                self.assertEqual(
+                    (True, 'attached'),
+                    nifcloud_volume.attach_volume(self.mockModule)
+                )
 
-	# attach volume attached
-	def test_attach_volume_attached(self):
-		with mock.patch('nifcloud_volume.get_volume_state',
-				mock.MagicMock(return_value=('attached', 'test001'))):
-			self.assertEqual(
-				(False, 'attached'),
-				nifcloud_volume.attach_volume(self.mockModule)
-			)
+    # attach volume error
+    def test_attach_volume_failed(self):
+        with mock.patch('nifcloud_volume.get_volume_state',
+                        mock.MagicMock(return_value=('detached', 'test001'))):
+            with mock.patch('requests.get',
+                            self.mockRequestsInternalServerError):
+                self.assertRaises(
+                    Exception,
+                    nifcloud_volume.attach_volume,
+                    (self.mockModule)
+                )
 
-	# attach volume unknown status
-	def test_attach_volume_attached(self):
-		with mock.patch('nifcloud_volume.get_volume_state',
-				mock.MagicMock(return_value=('unknown', 'test001'))):
-			self.assertRaises(
-				Exception,
-				nifcloud_volume.attach_volume,
-				(self.mockModule)
-			)
+    # attach volume attached
+    def test_attach_volume_attached(self):
+        with mock.patch('nifcloud_volume.get_volume_state',
+                        mock.MagicMock(return_value=('attached', 'test001'))):
+            self.assertEqual(
+                (False, 'attached'),
+                nifcloud_volume.attach_volume(self.mockModule)
+            )
 
-	# detach volume
-	def test_detach_volume(self):
-		self.assertRaises(
-			Exception,
-			nifcloud_volume.detach_volume,
-			(self.mockModule)
-		)
+    # attach volume unknown status
+    def test_attach_volume_unknown(self):
+        with mock.patch('nifcloud_volume.get_volume_state',
+                        mock.MagicMock(return_value=('unknown', 'test001'))):
+            self.assertRaises(
+                Exception,
+                nifcloud_volume.attach_volume,
+                (self.mockModule)
+            )
+
+    # detach volume
+    def test_detach_volume(self):
+        self.assertRaises(
+            Exception,
+            nifcloud_volume.detach_volume,
+            (self.mockModule)
+        )
+
 
 nifcloud_api_response_sample = dict(
-	describeVolumes = '''
+    describeVolumes='''
 <DescribeVolumesResponse xmlns="https://cp.cloud.nifty.com/api/">
   <requestId>5f781c9f-ad69-4a20-a0bc-d3ebbeff6c75</requestId>
   <volumeSet>
@@ -324,7 +352,7 @@ nifcloud_api_response_sample = dict(
   </volumeSet>
 </DescribeVolumesResponse>
 ''',
-	createVolume = '''
+    createVolume='''
 <CreateVolumeResponse xmlns="https://cp.cloud.nifty.com/api/">
   <requestId>f6dd8353-eb6b-6b4fd32e4f05</requestId>
   <volumeId>disk01</volumeId>
@@ -338,7 +366,7 @@ nifcloud_api_response_sample = dict(
   <description>Memo</description>
 </CreateVolumeResponse>
 ''',
-	attachVolume = '''
+    attachVolume='''
 <AttachVolumeResponse xmlns="https://cp.cloud.nifty.com/api/">
   <requestId>f6dd8353-eb6b-6b4fd32e4f05</requestId>
   <volumeId>disk01</volumeId>
@@ -349,7 +377,7 @@ nifcloud_api_response_sample = dict(
   <attachTime>2010-05-17T11:22:33.456Z</attachTime>
 </AttachVolumeResponse>
 ''',
-	internalServerError = '''
+    internalServerError='''
 <Response>
  <Errors>
   <Error>
@@ -363,4 +391,4 @@ nifcloud_api_response_sample = dict(
 )
 
 if __name__ == '__main__':
-	unittest.main()
+    unittest.main()
