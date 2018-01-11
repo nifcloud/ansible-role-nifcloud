@@ -222,6 +222,10 @@ def configure_user_data(module, params):
 
 
 def create_instance(module):
+
+    if module.check_mode:
+        return (True, -1, 'created(check mode)')
+
     goal_state = [16, 96]
 
     if module.params['image_id'] is None:
@@ -308,6 +312,9 @@ def start_instance(module, current_state):
     elif current_state == -1:
         return create_instance(module)
     elif current_state == 80:
+        if module.check_mode:
+            return (True, current_state, 'running(check mode)')
+
         params = dict()
         params['InstanceId.1'] = module.params['instance_id']
 
@@ -362,6 +369,8 @@ def stop_instance(module, current_state):
             instance_id=module.params['instance_id'],
             msg='instance not found'
         )
+    elif module.check_mode:
+        return (True, current_state, 'stopped(check mode)')
 
     params = dict()
     params['InstanceId.1'] = module.params['instance_id']
@@ -401,6 +410,9 @@ def stop_instance(module, current_state):
 def restart_instance(module, current_state):
     changed = False
 
+    if module.check_mode:
+        return (True, current_state, 'restarted(check mode)')
+
     if current_state == 16:
         (changed, current_state, msg) = stop_instance(module, current_state)
 
@@ -429,7 +441,8 @@ def main():
             startup_script=dict(required=False, type='str', default=None),
             startup_script_vars=dict(required=False, type='dict', default={}),
             network_interface=dict(required=False, type='list', default=[]),
-        )
+        ),
+        supports_check_mode=True
     )
 
     goal_state = module.params['state']
