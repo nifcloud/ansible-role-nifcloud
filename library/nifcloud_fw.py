@@ -89,6 +89,11 @@ options:
             - Purge existing ip permissions that are not found in ip permissions
         required: false
         default: 'true'
+    authorize_in_bulk:
+        description:
+            - Authorize ip_permissions for each group. Instead of taking a short time, It will shorten the execution time, but will not guarantee the order of ip_permission instead
+        required: false
+        default: 'false'
 '''  # noqa
 
 EXAMPLES = '''
@@ -500,7 +505,6 @@ def authorize_security_group(module, result, security_group_info):
         return (result, security_group_info)
 
     current_method_name = sys._getframe().f_code.co_name
-    goal_state = 'present'
     group_name = module.params['group_name']
 
     # get target
@@ -518,6 +522,47 @@ def authorize_security_group(module, result, security_group_info):
     if module.check_mode:
         result['changed_attributes']['number_of_authorize_rules'] = authorize_rules_size  # noqa
         return (result, security_group_info)
+
+    if not module.params.get('authorize_in_bulk'):
+        (result, security_group_info) = authorize_security_group_one_by_one(
+                                            module,
+                                            result,
+                                            security_group_info,
+                                            authorize_rules,
+                                            group_name,
+                                            current_method_name
+                                        )
+    else:
+        (result, security_group_info) = authorize_security_group_in_bulk(
+                                            module,
+                                            result,
+                                            security_group_info,
+                                            authorize_rules,
+                                            group_name,
+                                            current_method_name
+                                        )
+
+    # update check
+    current_ip_permissions = security_group_info.get('ip_permissions')
+    authorize_rules = except_ip_permissions(goal_ip_permissions,
+                                            current_ip_permissions)
+    if len(authorize_rules) != 0:
+        fail(module, result, 'changes failed',
+             current_method=current_method_name,
+             group_name=group_name,
+             current_info=security_group_info)
+
+    result['changed_attributes']['number_of_authorize_rules'] = authorize_rules_size  # noqa
+    return (result, security_group_info)
+
+
+def authorize_security_group_one_by_one(module, result, security_group_info,
+                                        authorize_rules, group_name,
+                                        current_method_name):
+    result = copy.deepcopy(result)
+    security_group_info = copy.deepcopy(security_group_info)
+
+    goal_state = 'present'
 
     # update ip_permissions
     # > I want IP permissions to be registered in the specified order.
@@ -561,17 +606,54 @@ def authorize_security_group(module, result, security_group_info):
         result, security_group_info = wait_for_processing(module, result,
                                                           goal_state)
 
-    # update check
-    current_ip_permissions = security_group_info.get('ip_permissions')
-    authorize_rules = except_ip_permissions(goal_ip_permissions,
-                                            current_ip_permissions)
-    if len(authorize_rules) != 0:
+    return (result, security_group_info)
+
+
+def authorize_security_group_in_bulk(module, result, security_group_info,
+                                     authorize_rules, group_name,
+                                     current_method_name):
+    result = copy.deepcopy(result)
+    security_group_info = copy.deepcopy(security_group_info)
+
+    goal_state = 'present'
+    params = dict(GroupName=group_name)
+
+    for index, authorize_rule in enumerate(authorize_rules):
+        ip_permission_param_prefix = 'IpPermissions.{0}.'.format(index + 1)
+
+        params[ip_permission_param_prefix + 'InOut'] = authorize_rule.get('in_out')  # noqa
+        params[ip_permission_param_prefix + 'IpProtocol'] = authorize_rule.get('ip_protocol')  # noqa
+        params[ip_permission_param_prefix + 'Description'] = authorize_rule.get('description', '')  # noqa
+
+        _from_port = authorize_rule.get('from_port')
+        if _from_port is not None:
+            params[ip_permission_param_prefix + 'FromPort'] = _from_port
+
+        _to_port = authorize_rule.get('to_port')
+        if _to_port is not None:
+            params[ip_permission_param_prefix + 'ToPort'] = _to_port
+
+        _group_name = authorize_rule.get('group_name')
+        if _group_name is not None:
+            params[ip_permission_param_prefix + 'Groups.1.GroupName'] = _group_name  # noqa
+
+        _cidr_ip = authorize_rule.get('cidr_ip')
+        if _cidr_ip is not None:
+            params[ip_permission_param_prefix + 'IpRanges.1.CidrIp'] = _cidr_ip  # noqa
+
+    res = request_to_api(module, 'POST', 'AuthorizeSecurityGroupIngress',
+                         params)
+
+    if res['status'] != 200:
+        error_info = get_api_error(res['xml_body'])
         fail(module, result, 'changes failed',
              current_method=current_method_name,
              group_name=group_name,
-             current_info=security_group_info)
+             **error_info)
 
-    result['changed_attributes']['number_of_authorize_rules'] = authorize_rules_size  # noqa
+    # wait for processing
+    result, security_group_info = wait_for_processing(module, result,
+                                                      goal_state)
     return (result, security_group_info)
 
 
@@ -708,6 +790,7 @@ def main():
                        choices=['present']),
             purge_ip_permissions=dict(required=False, type='bool',
                                       default=True),
+            authorize_in_bulk=dict(required=False, type='bool', default=False),
         ),
         supports_check_mode=True
     )
