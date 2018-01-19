@@ -223,9 +223,6 @@ def configure_user_data(module, params):
 
 def create_instance(module):
 
-    if module.check_mode:
-        return (True, -1, 'created(check mode)')
-
     goal_state = [16, 96]
 
     if module.params['image_id'] is None:
@@ -233,6 +230,9 @@ def create_instance(module):
 
     if module.params['key_name'] is None:
         module.fail_json(status=-1, msg='missing required arguments: key_name')
+
+    if module.check_mode:
+        return (True, -1, 'created(check mode)')
 
     params = dict(
         ImageId=module.params['image_id'],
