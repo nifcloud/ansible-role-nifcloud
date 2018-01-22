@@ -181,6 +181,10 @@ def get_volume_state(module):
 
 
 def create_volume(module):
+
+    if module.check_mode:
+        return (True, 'absent')
+
     params = dict(
         Size=module.params['size'],
         InstanceId=module.params['instance_id']
@@ -228,6 +232,9 @@ def attach_volume(module):
     if current_state == 'absent':
         return create_volume(module)
     elif current_state == 'available':
+        if module.check_mode:
+            return (True, current_state)
+
         params = dict(
             VolumeId=module.params['volume_id'],
             InstanceId=module.params['instance_id']
@@ -286,7 +293,8 @@ def main():
             instance_id=dict(required=True,  type='str'),
             accounting_type=dict(required=False, type='str', default=None),
             state=dict(required=True,  type='str'),
-        )
+        ),
+        supports_check_mode=True
     )
 
     goal_state = module.params['state']

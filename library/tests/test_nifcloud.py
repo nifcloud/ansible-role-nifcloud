@@ -52,7 +52,8 @@ class TestNifcloud(unittest.TestCase):
                              ipAddress='static')
                 ]
             ),
-            fail_json=mock.MagicMock(side_effect=Exception('failed'))
+            fail_json=mock.MagicMock(side_effect=Exception('failed')),
+            check_mode=False,
         )
 
         self.xmlnamespace = 'https://cp.cloud.nifty.com/api/'
@@ -297,6 +298,18 @@ class TestNifcloud(unittest.TestCase):
                     nifcloud.create_instance(self.mockModule)
                 )
 
+    # create check_mode
+    def test_create_instance_check_mode(self):
+        mock_module = mock.MagicMock(
+            params=copy.deepcopy(self.mockModule.params),
+            check_mode=True,
+        )
+
+        self.assertEqual(
+            (True, -1, 'created(check mode)'),
+            nifcloud.create_instance(mock_module)
+        )
+
     # create success without startup_script
     def test_create_instance_without_startup_script_success(self):
         params = copy.deepcopy(self.mockModule.params)
@@ -305,7 +318,8 @@ class TestNifcloud(unittest.TestCase):
 
         mock_module = mock.MagicMock(
             params=params,
-            fail_json=copy.deepcopy(self.mockModule.fail_json)
+            fail_json=copy.deepcopy(self.mockModule.fail_json),
+            check_mode=False,
         )
 
         with mock.patch('requests.post', self.mockRequestsPostRunInstance):
@@ -325,7 +339,8 @@ class TestNifcloud(unittest.TestCase):
 
         mock_module = mock.MagicMock(
             params=params,
-            fail_json=copy.deepcopy(self.mockModule.fail_json)
+            fail_json=copy.deepcopy(self.mockModule.fail_json),
+            check_mode=False,
         )
 
         with mock.patch('requests.post', self.mockRequestsPostRunInstance):
@@ -383,6 +398,18 @@ class TestNifcloud(unittest.TestCase):
                     nifcloud.start_instance(self.mockModule, 80)
                 )
 
+    # stopped(80) -> running(16) (check_mode)
+    def test_start_instance_stopped_check_mode(self):
+        mock_module = mock.MagicMock(
+            params=copy.deepcopy(self.mockModule.params),
+            check_mode=True,
+        )
+
+        self.assertEqual(
+            (True, 80, 'running(check mode)'),
+            nifcloud.start_instance(mock_module, 80)
+        )
+
     # change state failed
     def test_start_instance_failed(self):
         with mock.patch('requests.post', self.mockRequestsPostStartInstance):
@@ -428,6 +455,18 @@ class TestNifcloud(unittest.TestCase):
                     nifcloud.stop_instance(self.mockModule, 16)
                 )
 
+    # running(16) -> stopped(80) (check_mode)
+    def test_stop_instance_running_check_mode(self):
+        mock_module = mock.MagicMock(
+            params=copy.deepcopy(self.mockModule.params),
+            check_mode=True,
+        )
+
+        self.assertEqual(
+            (True, 16, 'stopped(check mode)'),
+            nifcloud.stop_instance(mock_module, 16)
+        )
+
     # change state failed
     def test_stop_instance_failed(self):
         with mock.patch('requests.get', self.mockRequestsGetStopInstance):
@@ -456,6 +495,18 @@ class TestNifcloud(unittest.TestCase):
                     (True, 16, 'restarted'),
                     nifcloud.restart_instance(self.mockModule, 16)
                 )
+
+    # running(16) - restart -> running(16) (check_mode)
+    def test_restart_instance_check_mode(self):
+        mock_module = mock.MagicMock(
+            params=copy.deepcopy(self.mockModule.params),
+            check_mode=True,
+        )
+
+        self.assertEqual(
+            (True, 16, 'restarted(check mode)'),
+            nifcloud.restart_instance(mock_module, 16)
+        )
 
 
 nifcloud_api_response_sample = dict(

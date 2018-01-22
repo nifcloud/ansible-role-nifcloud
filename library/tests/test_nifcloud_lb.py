@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import copy
 import sys
 import unittest
 import xml.etree.ElementTree as etree
@@ -36,7 +37,8 @@ class TestNifcloud(unittest.TestCase):
                 loadbalancer_port=80,
                 state='running'
             ),
-            fail_json=mock.MagicMock(side_effect=Exception('failed'))
+            fail_json=mock.MagicMock(side_effect=Exception('failed')),
+            check_mode=False,
         )
 
         self.xmlnamespace = 'https://cp.cloud.nifty.com/api/'
@@ -329,6 +331,18 @@ class TestNifcloud(unittest.TestCase):
                     nifcloud_lb.regist_instance(self.mockModule)
                 )
 
+    # absent -> present (check mode)
+    def test_regist_instance_check_mode(self):
+        mockModule = mock.MagicMock(
+            params=copy.deepcopy(self.mockModule.params),
+            check_mode=True,
+        )
+
+        self.assertEqual(
+            (True, 'absent'),
+            nifcloud_lb.regist_instance(mockModule)
+        )
+
     # internal server error
     def test_regist_instance_error(self):
         with mock.patch('requests.get', self.mockRequestsInternalServerError):
@@ -352,6 +366,20 @@ class TestNifcloud(unittest.TestCase):
                     (True, 'absent(lb001:80->80)'),
                     nifcloud_lb.deregist_instance(self.mockModule)
                 )
+
+    # deregist (check mode)
+    def test_deregist_instance_check_mode(self):
+        mockModule = mock.MagicMock(
+            params=copy.deepcopy(self.mockModule.params),
+            check_mode=True,
+        )
+
+        with mock.patch('nifcloud_lb.describe_load_balancers',
+                        self.mockDescribeLoadBalancers):
+            self.assertEqual(
+                (True, 'present'),
+                nifcloud_lb.deregist_instance(mockModule)
+            )
 
     # deregist failed
     def test_deregist_instance_failed(self):

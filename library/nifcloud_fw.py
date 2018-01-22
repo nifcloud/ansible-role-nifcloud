@@ -328,6 +328,10 @@ def create_security_group(module, result, security_group_info):
     if security_group_info is not None:
         return (result, security_group_info)
 
+    if module.check_mode:
+        result['created'] = True
+        return (result, security_group_info)
+
     current_method_name = sys._getframe().f_code.co_name
     goal_state = 'present'
     group_name = module.params['group_name']
@@ -397,6 +401,10 @@ def update_security_group_description(module, result, security_group_info):
     if goal_description is None or goal_description == current_description:
         return (result, security_group_info)
 
+    if module.check_mode:
+        result['changed_attributes']['description'] = goal_description
+        return (result, security_group_info)
+
     # update description
     params = dict(
         GroupName=group_name,
@@ -434,6 +442,10 @@ def update_security_group_log_limit(module, result, security_group_info):
     current_log_limit = security_group_info.get('log_limit')
     goal_log_limit = module.params.get('log_limit')
     if goal_log_limit is None or goal_log_limit == current_log_limit:
+        return (result, security_group_info)
+
+    if module.check_mode:
+        result['changed_attributes']['log_limit'] = goal_log_limit
         return (result, security_group_info)
 
     # update log_limit
@@ -501,6 +513,10 @@ def authorize_security_group(module, result, security_group_info):
     # skip check
     authorize_rules_size = len(authorize_rules)
     if authorize_rules_size == 0:
+        return (result, security_group_info)
+
+    if module.check_mode:
+        result['changed_attributes']['number_of_authorize_rules'] = authorize_rules_size  # noqa
         return (result, security_group_info)
 
     # update ip_permissions
@@ -583,6 +599,10 @@ def revoke_security_group(module, result, security_group_info):
     # prevent revoke
     purge_ip_permissions = module.params.get('purge_ip_permissions')
     if not purge_ip_permissions:
+        return (result, security_group_info)
+
+    if module.check_mode:
+        result['changed_attributes']['number_of_revoke_rules'] = revoke_rules_size  # noqa
         return (result, security_group_info)
 
     # build parameters
@@ -688,7 +708,8 @@ def main():
                        choices=['present']),
             purge_ip_permissions=dict(required=False, type='bool',
                                       default=True),
-        )
+        ),
+        supports_check_mode=True
     )
     run(module)
 

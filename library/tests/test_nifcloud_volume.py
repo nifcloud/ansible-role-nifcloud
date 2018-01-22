@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
+import copy
 import sys
 import unittest
 import xml.etree.ElementTree as etree
@@ -38,7 +38,8 @@ class TestNifcloud(unittest.TestCase):
                 accounting_type='2',
                 state='present'
             ),
-            fail_json=mock.MagicMock(side_effect=Exception('failed'))
+            fail_json=mock.MagicMock(side_effect=Exception('failed')),
+            check_mode=False,
         )
 
         self.xmlnamespace = 'https://cp.cloud.nifty.com/api/'
@@ -248,6 +249,18 @@ class TestNifcloud(unittest.TestCase):
                     nifcloud_volume.create_volume(self.mockModule)
                 )
 
+    # create volume (check_mode)
+    def test_create_volume_check_mode(self):
+        mockModule = mock.MagicMock(
+            params=copy.deepcopy(self.mockModule.params),
+            check_mode=True,
+        )
+
+        self.assertEqual(
+            (True, 'absent'),
+            nifcloud_volume.create_volume(mockModule)
+        )
+
     # create volume failed
     def test_create_volume_failed(self):
         with mock.patch('nifcloud_volume.get_volume_state',
@@ -281,6 +294,20 @@ class TestNifcloud(unittest.TestCase):
                     (True, 'attached'),
                     nifcloud_volume.attach_volume(self.mockModule)
                 )
+
+    # attach volume (check_mode)
+    def test_attach_volume_check_mode(self):
+        mockModule = mock.MagicMock(
+            params=copy.deepcopy(self.mockModule.params),
+            check_mode=True,
+        )
+
+        with mock.patch('nifcloud_volume.get_volume_state',
+                        mock.MagicMock(return_value=('available', 'test001'))):
+            self.assertEqual(
+                (True, 'available'),
+                nifcloud_volume.attach_volume(mockModule)
+            )
 
     # attach volume error
     def test_attach_volume_failed(self):

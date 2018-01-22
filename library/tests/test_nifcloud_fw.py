@@ -74,6 +74,7 @@ class TestNifcloud(unittest.TestCase):
             ),
             fail_json=mock.MagicMock(side_effect=Exception('failed')),
             exit_json=mock.MagicMock(side_effect=Exception('success')),
+            check_mode=False,
         )
 
         self.xmlnamespace = 'https://cp.cloud.nifty.com/api/'
@@ -992,6 +993,28 @@ class TestNifcloud(unittest.TestCase):
         ))
         self.assertEqual(info, self.security_group_info)
 
+    # create(check_mode) * do nothing
+    def test_create_security_group_check_mode(self):
+        mock_module = mock.MagicMock(
+            params=copy.deepcopy(self.mockModule.params),
+            check_mode=True,
+        )
+
+        empty_security_group_info = None
+
+        (result, info) = nifcloud_fw.create_security_group(
+            mock_module,
+            self.result['present'],
+            empty_security_group_info
+        )
+
+        self.assertEqual(result, dict(
+            created=True,
+            changed_attributes=dict(),
+            state='present',
+        ))
+        self.assertEqual(info, empty_security_group_info)
+
     # create failed
     def test_create_security_group_failed(self):
         with mock.patch(
@@ -1156,7 +1179,8 @@ class TestNifcloud(unittest.TestCase):
             params=dict(
                 copy.deepcopy(self.mockModule.params),
                 description=None,
-            )
+            ),
+            check_mode=False,
         )
 
         (result, info) = nifcloud_fw.update_security_group_description(
@@ -1183,6 +1207,28 @@ class TestNifcloud(unittest.TestCase):
 
         self.assertEqual(result, self.result['present'])
         self.assertEqual(info, changed_security_group_info)
+
+    # update description (check_mode) is no change  * do nothing
+    def test_update_security_group_description_check_mode(self):
+        mock_module = mock.MagicMock(
+            params=copy.deepcopy(self.mockModule.params),
+            check_mode=True,
+        )
+
+        (result, info) = nifcloud_fw.update_security_group_description(
+            mock_module,
+            self.result['present'],
+            self.security_group_info
+        )
+
+        self.assertEqual(result, dict(
+            created=False,
+            changed_attributes=dict(
+                description=self.mockModule.params['description'],
+            ),
+            state='present',
+        ))
+        self.assertEqual(info, self.security_group_info)
 
     # update description failed
     def test_update_security_group_description_failed(self):
@@ -1250,7 +1296,8 @@ class TestNifcloud(unittest.TestCase):
             params=dict(
                 copy.deepcopy(self.mockModule.params),
                 log_limit=None,
-            )
+            ),
+            check_mode=False,
         )
 
         (result, info) = nifcloud_fw.update_security_group_log_limit(
@@ -1277,6 +1324,28 @@ class TestNifcloud(unittest.TestCase):
 
         self.assertEqual(result, self.result['present'])
         self.assertEqual(info, changed_security_group_info)
+
+    # update log_limit (check_mode) is no change  * do nothing
+    def test_update_security_group_log_limit_check_mode(self):
+        mock_module = mock.MagicMock(
+            params=copy.deepcopy(self.mockModule.params),
+            check_mode=True,
+        )
+
+        (result, info) = nifcloud_fw.update_security_group_log_limit(
+            mock_module,
+            self.result['present'],
+            self.security_group_info
+        )
+
+        self.assertEqual(result, dict(
+            created=False,
+            changed_attributes=dict(
+                log_limit=self.mockModule.params['log_limit'],
+            ),
+            state='present',
+        ))
+        self.assertEqual(info, self.security_group_info)
 
     # update log_limit failed
     def test_update_security_group_log_limit_failed(self):
@@ -1388,6 +1457,30 @@ class TestNifcloud(unittest.TestCase):
 
         self.assertEqual(result, self.result['absent'])
         self.assertIsNone(info)
+
+    # authorize ip_permissions(check_mode) are no change  * do nothing
+    def test_authorize_security_group_check_mode(self):
+        mock_module = mock.MagicMock(
+            params=copy.deepcopy(self.mockModule.params),
+            check_mode=True,
+        )
+
+        (result, info) = nifcloud_fw.authorize_security_group(
+            mock_module,
+            self.result['present'],
+            self.security_group_info
+        )
+
+        self.assertEqual(result, dict(
+            created=False,
+            changed_attributes=dict(
+                number_of_authorize_rules=len(
+                    self.mockModule.params['ip_permissions']
+                ),
+            ),
+            state='present',
+        ))
+        self.assertEqual(info, self.security_group_info)
 
     # authorize failed
     def test_authorize_security_group_failed(self):
@@ -1507,6 +1600,38 @@ class TestNifcloud(unittest.TestCase):
 
         self.assertEqual(result, self.result['absent'])
         self.assertIsNone(info)
+
+    # revoke ip_permissions(check_mode) are no change  * do nothing
+    def test_revoke_security_group_check_mode(self):
+        mock_module = mock.MagicMock(
+            params=copy.deepcopy(self.mockModule.params),
+            check_mode=True,
+        )
+
+        security_group_info = dict(
+            copy.deepcopy(self.security_group_info),
+            ip_permissions=list(
+                self.security_group_info['ip_permissions'] +
+                self.mockModule.params['ip_permissions'],
+            ),
+        )
+
+        (result, info) = nifcloud_fw.revoke_security_group(
+            mock_module,
+            self.result['present'],
+            security_group_info
+        )
+
+        self.assertEqual(result, dict(
+            created=False,
+            changed_attributes=dict(
+                number_of_revoke_rules=len(
+                    self.security_group_info['ip_permissions']
+                ),
+            ),
+            state='present',
+        ))
+        self.assertEqual(info, security_group_info)
 
     # revoke failed
     def test_revoke_security_group_failed(self):

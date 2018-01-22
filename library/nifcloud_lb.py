@@ -201,6 +201,9 @@ def regist_instance(module):
     if is_present_in_load_balancer(module):
         return (False, 'present')
 
+    if module.check_mode:
+        return (True, 'absent')
+
     params = dict()
     params['LoadBalancerName'] = module.params['loadbalancer_name']
     params['LoadBalancerPort'] = module.params['loadbalancer_port']
@@ -264,6 +267,9 @@ def deregist_instance(module):
                     instance_port != module.params['instance_port']):
                 continue
 
+            if module.check_mode:
+                return (True, 'present')
+
             params = dict()
             params['LoadBalancerName'] = loadbalancer_name
             params['LoadBalancerPort'] = loadbalancer_port
@@ -309,7 +315,8 @@ def main():
             loadbalancer_name=dict(required=False, type='str', default=None),
             loadbalancer_port=dict(required=False, type='int', default=None),
             state=dict(required=True,  type='str'),
-        )
+        ),
+        supports_check_mode=True
     )
 
     goal_state = module.params['state']
