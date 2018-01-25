@@ -16,18 +16,20 @@ Create or update, authorize, revoke a firewall group.
 
 ## Options
 
-| parameter            | required | default    | type | choices   | aliases | comments                                                                                          |
-|----------------------|----------|------------|------|-----------|---------|---------------------------------------------------------------------------------------------------|
-| access_key           | yes      |            | str  |           |         | NIFCLOUD API access key                                                                           |
-| secret_access_key    | yes      |            | str  |           |         | NIFCLOUD API secret access key                                                                    |
-| endpoint             | yes      |            | str  |           |         | API endpoint of target region                                                                     |
-| group_name           | yes      |            | str  |           | name    | Target firewall group ID                                                                          |
-| description          | no       |            | str  |           |         | Description of target firewall group                                                              |
-| availability_zone    | no       |            | str  |           |         | Availability zone                                                                                 |
-| log_limit            | no       |            | int  |           |         | The upper limit number of logs to retain of communication rejected by the firewall settings rules |
-| ip_permissions       | no       | list()     | list |           |         | List of rules that allows incoming or outgoing communication to resources                         |
-| state                | no       | "present"  | str  | "present" |         | Goal status                                                                                       |
-| purge_ip_permissions | no       | True       | bool |           |         | Purge existing ip permissions that are not found in ip permissions                                |
+| parameter            | required | default    | type | choices   | aliases | comments                                                                                                                                                               |
+|----------------------|----------|------------|------|-----------|---------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| access_key           | yes      |            | str  |           |         | NIFCLOUD API access key                                                                                                                                                |
+| secret_access_key    | yes      |            | str  |           |         | NIFCLOUD API secret access key                                                                                                                                         |
+| endpoint             | yes      |            | str  |           |         | API endpoint of target region                                                                                                                                          |
+| group_name           | yes      |            | str  |           | name    | Target firewall group ID                                                                                                                                               |
+| description          | no       |            | str  |           |         | Description of target firewall group                                                                                                                                   |
+| availability_zone    | no       |            | str  |           |         | Availability zone                                                                                                                                                      |
+| log_limit            | no       |            | int  |           |         | The upper limit number of logs to retain of communication rejected by the firewall settings rules                                                                      |
+| ip_permissions       | no       | list()     | list |           |         | List of rules that allows incoming or outgoing communication to resources                                                                                              |
+| state                | no       | "present"  | str  | "present" |         | Goal status                                                                                                                                                            |
+| purge_ip_permissions | no       | True       | bool |           |         | Purge existing ip permissions that are not found in ip permissions                                                                                                     |
+| authorize_in_bulk    | no       | False      | bool |           |         | Authorize ip_permissions for each group. Instead of taking a short time, It will shorten the execution time, but will not guarantee the order of ip_permission instead |
+
 
 ## Examples
 

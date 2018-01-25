@@ -39,6 +39,7 @@ class TestNifcloud(unittest.TestCase):
                 log_limit=100000,
                 state='present',
                 purge_ip_permissions=True,
+                authorize_in_bulk=False,
                 ip_permissions=[
                     dict(
                         in_out='OUT',
@@ -1416,6 +1417,55 @@ class TestNifcloud(unittest.TestCase):
             ):
                 (result, info) = nifcloud_fw.authorize_security_group(
                     self.mockModule,
+                    self.result['present'],
+                    self.security_group_info
+                )
+
+        self.assertEqual(result, dict(
+            created=False,
+            changed_attributes=dict(
+                number_of_authorize_rules=len(
+                    self.mockModule.params['ip_permissions']
+                ),
+            ),
+            state='present',
+        ))
+        self.assertEqual(info, changed_security_group_info)
+
+    # authorize(bulk) success
+    def test_authorize_security_group_bulk_success(self):
+        changed_security_group_info = dict(
+            copy.deepcopy(self.security_group_info),
+            ip_permissions=list(
+                self.security_group_info['ip_permissions'] +
+                self.mockModule.params['ip_permissions'],
+            ),
+        )
+
+        mock_module = mock.MagicMock(
+            params=dict(
+                copy.deepcopy(self.mockModule.params),
+                authorize_in_bulk=True,
+            ),
+            check_mode=False,
+        )
+
+        mock_describe_security_group = mock.MagicMock(
+            return_value=(
+                self.result['present'],
+                changed_security_group_info,
+            ))
+
+        with mock.patch(
+                'requests.post',
+                self.mockRequestsPostAuthorizeSecurityGroup
+        ):
+            with mock.patch(
+                    'nifcloud_fw.describe_security_group',
+                    mock_describe_security_group
+            ):
+                (result, info) = nifcloud_fw.authorize_security_group(
+                    mock_module,
                     self.result['present'],
                     self.security_group_info
                 )
