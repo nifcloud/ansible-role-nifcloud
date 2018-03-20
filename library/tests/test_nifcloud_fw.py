@@ -363,7 +363,7 @@ class TestNifcloud(unittest.TestCase):
                 'error message',
                 group_name='fw001'
             )
-        self.assertEqual(cm.exception.message, 'failed')
+        self.assertEqual(str(cm.exception), 'failed')
 
     # contains_ip_permissions true case 1
     def test_contains_ip_permissions_true_case_1(self):
@@ -943,7 +943,7 @@ class TestNifcloud(unittest.TestCase):
                     'absent'
                 )
 
-        self.assertEqual(cm.exception.message, 'failed')
+        self.assertEqual(str(cm.exception), 'failed')
 
     # wait_for_processing unmatch present
     def test_wait_for_processing_failed_present(self):
@@ -958,7 +958,7 @@ class TestNifcloud(unittest.TestCase):
                     'present'
                 )
 
-        self.assertEqual(cm.exception.message, 'failed')
+        self.assertEqual(str(cm.exception), 'failed')
 
     # create present  * do nothing
     def test_create_security_group_skip(self):
@@ -1032,7 +1032,7 @@ class TestNifcloud(unittest.TestCase):
                         self.result['absent'],
                         None
                     )
-        self.assertEqual(cm.exception.message, 'failed')
+        self.assertEqual(str(cm.exception), 'failed')
 
     # create request failed
     def test_create_security_group_request_failed(self):
@@ -1043,7 +1043,7 @@ class TestNifcloud(unittest.TestCase):
                     self.result['absent'],
                     None
                 )
-        self.assertEqual(cm.exception.message, 'failed')
+        self.assertEqual(str(cm.exception), 'failed')
 
     # update api success
     def test_update_security_group_attribute_success(self):
@@ -1109,7 +1109,7 @@ class TestNifcloud(unittest.TestCase):
                         self.security_group_info,
                         params
                     )
-        self.assertEqual(cm.exception.message, 'failed')
+        self.assertEqual(str(cm.exception), 'failed')
 
     # update api request failed
     def test_update_security_group_attribute_request_failed(self):
@@ -1126,7 +1126,7 @@ class TestNifcloud(unittest.TestCase):
                     self.security_group_info,
                     params
                 )
-        self.assertEqual(cm.exception.message, 'failed')
+        self.assertEqual(str(cm.exception), 'failed')
 
     # update description success
     def test_update_security_group_description_success(self):
@@ -1243,7 +1243,7 @@ class TestNifcloud(unittest.TestCase):
                     self.result['present'],
                     self.security_group_info
                 )
-        self.assertEqual(cm.exception.message, 'failed')
+        self.assertEqual(str(cm.exception), 'failed')
 
     # update log_limit success
     def test_update_security_group_log_limit_success(self):
@@ -1360,7 +1360,7 @@ class TestNifcloud(unittest.TestCase):
                     self.result['present'],
                     self.security_group_info
                 )
-        self.assertEqual(cm.exception.message, 'failed')
+        self.assertEqual(str(cm.exception), 'failed')
 
     # update
     def test_update_security_group(self):
@@ -1548,7 +1548,7 @@ class TestNifcloud(unittest.TestCase):
                         self.result['present'],
                         self.security_group_info
                     )
-        self.assertEqual(cm.exception.message, 'failed')
+        self.assertEqual(str(cm.exception), 'failed')
 
     # authorize request failed
     def test_authorize_security_group_request_failed(self):
@@ -1559,7 +1559,7 @@ class TestNifcloud(unittest.TestCase):
                     self.result['present'],
                     self.security_group_info
                 )
-        self.assertEqual(cm.exception.message, 'failed')
+        self.assertEqual(str(cm.exception), 'failed')
 
     # revoke success
     def test_revoke_security_group_success(self):
@@ -1699,7 +1699,7 @@ class TestNifcloud(unittest.TestCase):
                         self.result['present'],
                         self.security_group_info
                     )
-        self.assertEqual(cm.exception.message, 'failed')
+        self.assertEqual(str(cm.exception), 'failed')
 
     # revoke request failed
     def test_revoke_security_group_request_failed(self):
@@ -1710,7 +1710,7 @@ class TestNifcloud(unittest.TestCase):
                     self.result['present'],
                     self.security_group_info
                 )
-        self.assertEqual(cm.exception.message, 'failed')
+        self.assertEqual(str(cm.exception), 'failed')
 
     # run success (absent - create -> present - other action -> present)
     def test_run_success_absent(self):
@@ -1735,7 +1735,7 @@ class TestNifcloud(unittest.TestCase):
                         ):
                             with self.assertRaises(Exception) as cm:
                                 nifcloud_fw.run(self.mockModule)
-        self.assertEqual(cm.exception.message, 'success')
+        self.assertEqual(str(cm.exception), 'success')
 
     # run success (present - create skip -> present - other action -> present)
     def test_run_success_present(self):
@@ -1757,7 +1757,7 @@ class TestNifcloud(unittest.TestCase):
                     ):
                         with self.assertRaises(Exception) as cm:
                             nifcloud_fw.run(self.mockModule)
-        self.assertEqual(cm.exception.message, 'success')
+        self.assertEqual(str(cm.exception), 'success')
 
     # run failed (absent - create -> absent - skip other action -> absent)
     def test_run_failed(self):
@@ -1771,7 +1771,7 @@ class TestNifcloud(unittest.TestCase):
             ):
                 with self.assertRaises(Exception) as cm:
                     nifcloud_fw.run(self.mockModule)
-        self.assertEqual(cm.exception.message, 'failed')
+        self.assertEqual(str(cm.exception), 'failed')
 
 
 nifcloud_api_response_sample = dict(
