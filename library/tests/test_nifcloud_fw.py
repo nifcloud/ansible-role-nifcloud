@@ -221,7 +221,7 @@ class TestNifcloud(unittest.TestCase):
             params
         )
         self.assertEqual(signature,
-                         '+05Mgbw/WCN+U6euoFzHIyFi8i9UUTGg1uiNHqYcu38=')
+                         b'+05Mgbw/WCN+U6euoFzHIyFi8i9UUTGg1uiNHqYcu38=')
 
     # calculate signature with string parameter including slash
     def test_calculate_signature_with_slash(self):
@@ -251,7 +251,7 @@ class TestNifcloud(unittest.TestCase):
         # This shell-script calculate with encoding a slash,
         # like "nifcloud.calculate_signature()".
         self.assertEqual(signature,
-                         'SsYPHOdKWpiniT39oGNJ5EjJum2gvqlUbozNxM9CSjE=')
+                         b'SsYPHOdKWpiniT39oGNJ5EjJum2gvqlUbozNxM9CSjE=')
 
     # method get
     def test_request_to_api_get(self):

@@ -129,7 +129,7 @@ class TestNifcloud(unittest.TestCase):
         )
         self.assertEqual(
             signature,
-            'Y7/0nc3dCK9UNkp+w5sh08ybJLQjh69mXOgcxJijDEU='
+            b'Y7/0nc3dCK9UNkp+w5sh08ybJLQjh69mXOgcxJijDEU='
         )
 
     # calculate signature with string parameter including slash
@@ -161,7 +161,7 @@ class TestNifcloud(unittest.TestCase):
         # like "nifcloud.calculate_signature()".
         self.assertEqual(
             signature,
-            'dHOoGcBgO14Roaioryic9IdFPg7G+lihZ8Wyoa25ok4='
+            b'dHOoGcBgO14Roaioryic9IdFPg7G+lihZ8Wyoa25ok4='
         )
 
     # method get
