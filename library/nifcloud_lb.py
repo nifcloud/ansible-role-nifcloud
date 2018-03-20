@@ -18,12 +18,17 @@
 import base64
 import hashlib
 import hmac
-import urllib
 import xml.etree.ElementTree as etree
 
 import requests
 from ansible.module_utils.basic import *  # noqa
 
+try:
+    # Python 2
+    from urllib import quote, urlencode
+except ImportError:
+    # Python 3
+    from urllib.parse import quote, urlencode
 
 DOCUMENTATION = '''
 ---
@@ -78,7 +83,7 @@ EXAMPLES = '''
 def calculate_signature(secret_access_key, method, endpoint, path, params):
     payload = ''
     for v in sorted(params.items()):
-        payload += '&{0}={1}'.format(v[0], urllib.quote(str(v[1]), ''))
+        payload += '&{0}={1}'.format(v[0], quote(str(v[1]), ''))
     payload = payload[1:]
 
     string_to_sign = [method, endpoint, path, payload]
@@ -111,11 +116,11 @@ def request_to_api(module, method, action, params):
     r = None
     if method == 'GET':
         url = 'https://{0}{1}?{2}'.format(endpoint, path,
-                                          urllib.urlencode(params))
+                                          urlencode(params))
         r = requests.get(url)
     elif method == 'POST':
         url = 'https://{0}{1}'.format(endpoint, path)
-        r = requests.post(url, urllib.urlencode(params))
+        r = requests.post(url, urlencode(params))
     else:
         module.fail_json(
             status=-1,
