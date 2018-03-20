@@ -93,8 +93,8 @@ def calculate_signature(secret_access_key, method, endpoint, path, params):
 
     string_to_sign = [method, endpoint, path, payload]
     digest = hmac.new(
-        secret_access_key,
-        '\n'.join(string_to_sign),
+        secret_access_key.encode('utf-8'),
+        '\n'.join(string_to_sign).encode('utf-8'),
         hashlib.sha256
     ).digest()
 
