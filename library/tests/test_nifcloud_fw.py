@@ -787,8 +787,8 @@ class TestNifcloud(unittest.TestCase):
         ))
         self.assertIsInstance(info, dict)
         self.assertEqual(info['group_name'],  'fw001')
-        self.assertIsInstance(info['description'], str)
-        self.assertEqual(info['description'], 'sample fw')
+        self.assertIsInstance(info['description'], bytes)
+        self.assertEqual(info['description'], b'sample fw')
         self.assertEqual(info['log_limit'],   100000)
         self.assertEqual(info['ip_permissions'], [
             dict(
@@ -826,8 +826,8 @@ class TestNifcloud(unittest.TestCase):
             state='present',
         ))
         self.assertIsInstance(info, dict)
-        self.assertIsInstance(info['description'], str)
-        self.assertEqual(info['description'], 'サンプルFW')
+        self.assertIsInstance(info['description'], bytes)
+        self.assertEqual(info['description'], u'サンプルFW'.encode('utf-8'))
 
     # describe present description none
     def test_describe_security_group_description_none(self):
