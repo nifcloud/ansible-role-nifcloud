@@ -217,7 +217,7 @@ def configure_user_data(module, params):
             startup_script = startup_script_template.format(
                 **startup_script_vars
             )
-            params['UserData'] = base64.b64encode(startup_script)
+            params['UserData'] = base64.b64encode(startup_script.encode('utf-8'))
             params['UserData.Encoding'] = 'base64'
     except IOError:
         if 'UserData' in params:
