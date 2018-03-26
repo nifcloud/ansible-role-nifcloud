@@ -19,12 +19,17 @@ import base64
 import hashlib
 import hmac
 import time
-import urllib
 import xml.etree.ElementTree as etree
 
 import requests
 from ansible.module_utils.basic import *  # noqa
 
+try:
+    # Python 2
+    from urllib import quote, urlencode
+except ImportError:
+    # Python 3
+    from urllib.parse import quote, urlencode
 
 DOCUMENTATION = '''
 ---
@@ -121,13 +126,13 @@ EXAMPLES = '''
 def calculate_signature(secret_access_key, method, endpoint, path, params):
     payload = ""
     for v in sorted(params.items()):
-        payload += '&{0}={1}'.format(v[0], urllib.quote(str(v[1]), ''))
+        payload += '&{0}={1}'.format(v[0], quote(str(v[1]), ''))
     payload = payload[1:]
 
     string_to_sign = [method, endpoint, path, payload]
     digest = hmac.new(
-        secret_access_key,
-        '\n'.join(string_to_sign),
+        secret_access_key.encode('utf-8'),
+        '\n'.join(string_to_sign).encode('utf-8'),
         hashlib.sha256
     ).digest()
 
@@ -154,11 +159,11 @@ def request_to_api(module, method, action, params):
     r = None
     if method == 'GET':
         url = 'https://{0}{1}?{2}'.format(endpoint, path,
-                                          urllib.urlencode(params))
+                                          urlencode(params))
         r = requests.get(url)
     elif method == 'POST':
         url = 'https://{0}{1}'.format(endpoint, path)
-        r = requests.post(url, urllib.urlencode(params))
+        r = requests.post(url, urlencode(params))
     else:
         module.fail_json(
             status=-1,
@@ -212,7 +217,8 @@ def configure_user_data(module, params):
             startup_script = startup_script_template.format(
                 **startup_script_vars
             )
-            params['UserData'] = base64.b64encode(startup_script)
+            startup_script_bytes = startup_script.encode('utf-8')
+            params['UserData'] = base64.b64encode(startup_script_bytes)
             params['UserData.Encoding'] = 'base64'
     except IOError:
         if 'UserData' in params:
