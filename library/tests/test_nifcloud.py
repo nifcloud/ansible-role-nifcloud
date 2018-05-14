@@ -164,6 +164,34 @@ class TestNifcloud(unittest.TestCase):
             b'dHOoGcBgO14Roaioryic9IdFPg7G+lihZ8Wyoa25ok4='
         )
 
+    # calculate signature with user_data
+    def test_calculate_signature_with_user_data(self):
+        secret_access_key = self.mockModule.params['secret_access_key']
+        method = 'POST'
+        endpoint = self.mockModule.params['endpoint']
+        path = '/api/'
+        params = dict(
+            Action='RunInstances',
+            AccessKeyId=self.mockModule.params['access_key'],
+            SignatureMethod='HmacSHA256',
+            SignatureVersion='2',
+        )
+
+        params['InstanceId.1'] = self.mockModule.params['instance_id']
+        nifcloud.configure_user_data(self.mockModule, params)
+
+        signature = nifcloud.calculate_signature(
+            secret_access_key,
+            method,
+            endpoint,
+            path,
+            params
+        )
+        self.assertEqual(
+            signature,
+            b'IiT263IgchyBDh6RsJaRXa3Tnaz4GXTSm2Jc9uFUxdQ='
+        )
+
     # method get
     def test_request_to_api_get(self):
         method = 'GET'
