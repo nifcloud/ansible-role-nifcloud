@@ -18,6 +18,7 @@
 import base64
 import hashlib
 import hmac
+import time
 import xml.etree.ElementTree as etree
 
 import requests
@@ -50,34 +51,251 @@ options:
         description:
             - API endpoint of target region.
         required: true
-    instance_id:
+    loadbalancer_name:
         description:
-            - Instance ID
+            - Target Load Balancer name
+        required: true
+    loadbalancer_port:
+        description:
+            - Target Load Balancer port number
         required: true
     instance_port:
         description:
-            - Destination port number (required for registration)
-        required: false
-        default: null
-    loadbalancer_name:
+            - Destination port number
+        required: true
+    balancing_type:
         description:
-            - Target Load Balancer name (required for registration)
+            - Balancing type (1: Round-Robin or 2: Least-Connection)
         required: false
-        default: null
-    loadbalancer_port:
+        default: 1
+    network_volume:
         description:
-            - Target Load Balancer port number (required for registration)
+            - Maximum of network volume
         required: false
+        default: 10
+    ip_version:
+        description:
+            - IP version (v4 or v6)
+        required: false
+        default: 'v4'
+    accounting_type:
+        description:
+            - Accounting type (1: monthly, 2: pay per use)
+        required: false
+        default: 'v4'
+    policy_type:
+        description:
+            - Encryption policy type (standard or ats)
+        required: false
+        default: 'standard'
+    instance_ids:
+        description:
+            - List of Instance ID
+        required: true
+    purge_instance_ids:
+        description:
+            - Purge existing instance ids that are not found in instance_ids
+        required: false
+        default: true
+    filter_ip_addresses:
+        description:
+            - List of ip addresses that allows/denys incoming communication to resources
         default: null
+    filter_type:
+        description:
+            - Filter type that switch to allows/denys for filter ip addresses (1: allow or 2: deny)
+        default: 1
+    purge_filter_ip_addresses:
+        description:
+            - Purge existing filter ip addresses that are not found in filter_ip_addresses
+        required: false
+        default: true
     state:
         description:
-            - Goal status ("present" or "absent")
+            - Goal status (only "present")
         required: true
 '''  # noqa
 
 EXAMPLES = '''
 - action: nifcloud_lb access_key="YOUR_ACCESS_KEY" secret_access_key="YOUR_SECRET_ACCESS_KEY" endpoint="west-1.cp.cloud.nifty.com" instance_id="test001" instance_port=80 loadbalancer_name="lb001" loadbalancer_port=80 state="present"
 '''  # noqa
+
+
+ISO8601 = '%Y-%m-%dT%H:%M:%SZ'
+
+
+class LoadBalancerManager:
+    """Handles NIFCLOUD LoadBalancer registration"""
+
+    _ERROR_LB_NAME_NOT_FOUND = 'Client.InvalidParameterNotFound.LoadBalancer'
+    _ERROR_LB_PORT_NOT_FOUND = 'Client.InvalidParameterNotFound.LoadBalancerPort'  # noqa
+
+    def __init__(self, module):
+        self.module = module
+
+        self.access_key = module.params['access_key']
+        self.secret_access_key = module.params['secret_access_key']
+        self.endpoint = module.params['endpoint']
+
+        self.loadbalancer_name = module.params['loadbalancer_name']
+        self.loadbalancer_port = module.params['loadbalancer_port']
+        self.instance_port = module.params['instance_port']
+        self.balancing_type = module.params['balancing_type']
+        self.network_volume = module.params['network_volume']
+        self.ip_version = module.params['ip_version']
+        self.accounting_type = module.params['accounting_type']
+        self.policy_type = module.params['policy_type']
+
+        self.instance_ids = module.params['instance_ids']
+        self.purge_instance_ids = module.params['purge_instance_ids']
+        self.filter_ip_addresses = module.params['filter_ip_addresses']
+        self.filter_type = module.params['filter_type']
+        self.purge_filter_ip_addresses = module.params['purge_filter_ip_addresses']  # noqa
+        self.state = module.params['state']
+
+        self.current_state = ''
+        self.changed = False
+
+    def ensure_present(self):
+        self.current_state = self._get_state_instance_in_load_balancer()
+
+        if self.current_state == 'absent':
+            self._create_load_balancer()
+        elif self.current_state == 'port-not-found':
+            self._register_port()
+
+        # self._sync_filter()
+        # self._regist_instance()
+
+    def _describe_load_balancers(self, params):
+        return request_to_api(self.module, 'GET', 'DescribeLoadBalancers',
+                              params)
+
+    def _describe_current_load_balancers(self):
+        params = dict()
+        params['LoadBalancerNames.member.1'] = self.loadbalancer_name
+        params['LoadBalancerNames.LoadBalancerPort.1'] = self.loadbalancer_port
+        params['LoadBalancerNames.InstancePort.1'] = self.instance_port
+        return self._describe_load_balancers(params)
+
+    def _get_state_instance_in_load_balancer(self):
+        res = self._describe_current_load_balancers()
+
+        if res['status'] == 200:
+            return 'present'
+        else:
+            error_info = get_api_error(res['xml_body'])
+
+            if error_info.get('code') == self._ERROR_LB_PORT_NOT_FOUND:
+                return 'port-not-found'
+            elif error_info.get('code') == self._ERROR_LB_NAME_NOT_FOUND:
+                return 'absent'
+
+            self._fail_request(res, 'check current state failed')
+
+    def _is_present_in_load_balancer(self):
+        return self._get_state_instance_in_load_balancer() == 'present'
+
+    def _is_absent_in_load_balancer(self):
+        return self._get_state_instance_in_load_balancer() == 'absent'
+
+    def _create_load_balancer(self):
+        params = dict()
+        params['LoadBalancerName'] = self.loadbalancer_name
+        params['Listeners.member.1.LoadBalancerPort'] = self.loadbalancer_port
+        params['Listeners.member.1.InstancePort'] = self.instance_port
+        params['Listeners.member.1.BalancingType'] = self.balancing_type
+        params['NetworkVolume'] = self.network_volume
+        params['IpVersion'] = self.ip_version
+        params['AccountingType'] = self.accounting_type
+        params['PolicyType'] = self.policy_type
+
+        api_name = 'CreateLoadBalancer'
+        res = request_to_api(self.module, 'POST', api_name, params)
+
+        failed_msg = 'changes failed (create_load_balancer)'
+        if res['status'] == 200:
+            if self._wait_for_loadbalancer_status('present'):
+                self.changed = True
+            else:
+                self._fail_request(res, failed_msg)
+        else:
+            self._fail_request(res, failed_msg)
+
+    def _register_port(self):
+        params = dict()
+        params['LoadBalancerName'] = self.loadbalancer_name
+        params['Listeners.member.1.LoadBalancerPort'] = self.loadbalancer_port
+        params['Listeners.member.1.InstancePort'] = self.instance_port
+        params['Listeners.member.1.BalancingType'] = self.balancing_type
+
+        api_name = 'RegisterPortWithLoadBalancer'
+        res = request_to_api(self.module, 'POST', api_name, params)
+
+        failed_msg = 'changes failed (register_port)'
+        if res['status'] == 200:
+            if self._wait_for_loadbalancer_status('present'):
+                self.changed = True
+            else:
+                self._fail_request(res, failed_msg)
+        else:
+            self._fail_request(res, failed_msg)
+
+    def _wait_for_loadbalancer_status(self, goal_state):
+        self.current_state = self._get_state_instance_in_load_balancer()
+
+        if self.current_state == goal_state:
+            return True
+
+        retry_count = 10
+        while retry_count > 0 and self.current_state != goal_state:
+            time.sleep(60)
+            self.current_state = self._get_state_instance_in_load_balancer()
+            retry_count -= 1
+
+        return self.current_state == goal_state
+
+    def _regist_instance(self):
+        if self._is_present_in_load_balancer():
+            return (False, 'present')
+
+        if self.module.check_mode:
+            return (True, 'absent')
+
+        params = dict()
+        params['LoadBalancerName'] = self.loadbalancer_name
+        params['LoadBalancerPort'] = self.loadbalancer_port
+        params['InstancePort'] = self.instance_port
+
+        instance_no = 1
+        for instance_id in self.instance_ids:
+            key = 'Instances.member.{0}.InstanceId'.format(instance_no)
+            params[key] = instance_id
+            instance_no = instance_no + 1
+
+        res = request_to_api(self.module, 'GET',
+                             'RegisterInstancesWithLoadBalancer', params)
+
+        if res['status'] == 200:
+            current_status = self._get_state_instance_in_load_balancer()
+            return (True, current_status)
+        else:
+            error_info = get_api_error(res['xml_body'])
+            self.module.fail_json(
+                status=-1,
+                msg='changes failed (regist_instance)',
+                error_code=error_info.get('code'),
+                error_message=error_info.get('message')
+            )
+
+    def _fail_request(self, response, msg):
+        error_info = get_api_error(response['xml_body'])
+        self.module.fail_json(
+            status=-1,
+            msg=msg,
+            error_code=error_info.get('code'),
+            error_message=error_info.get('message'),
+        )
 
 
 def calculate_signature(secret_access_key, method, endpoint, path, params):
@@ -101,6 +319,7 @@ def request_to_api(module, method, action, params):
     params['AccessKeyId'] = module.params['access_key']
     params['SignatureMethod'] = 'HmacSHA256'
     params['SignatureVersion'] = '2'
+    params['Timestamp'] = time.strftime(ISO8601, time.gmtime())
 
     path = '/api/'
     endpoint = module.params['endpoint']
@@ -148,189 +367,39 @@ def get_api_error(xml_body):
     return info
 
 
-def describe_load_balancers(module, params):
-    return request_to_api(module, 'GET', 'DescribeLoadBalancers', params)
-
-
-def get_state_instance_in_load_balancer(module):
-    params = dict()
-    params['LoadBalancerNames.member.1'] = module.params['loadbalancer_name']
-    params['LoadBalancerNames.LoadBalancerPort.1'] = module.params['loadbalancer_port']  # noqa
-    params['LoadBalancerNames.InstancePort.1'] = module.params['instance_port']
-    res = describe_load_balancers(module, params)
-
-    if res['status'] == 200:
-        pattern = ('.//{{{nc}}}Instances/{{{nc}}}member/{{{nc}}}InstanceId'
-                   .format(**res['xml_namespace']))
-        for instance_id in res['xml_body'].findall(pattern):
-            if instance_id.text == module.params['instance_id']:
-                return 'present'
-        return 'absent'
-    else:
-        error_info = get_api_error(res['xml_body'])
-        module.fail_json(
-            status=-1,
-            msg='check current state failed',
-            error_code=error_info.get('code'),
-            error_message=error_info.get('message')
-        )
-
-
-def is_present_in_load_balancer(module):
-    return get_state_instance_in_load_balancer(module) == 'present'
-
-
-def is_absent_in_load_balancer(module):
-    return get_state_instance_in_load_balancer(module) == 'absent'
-
-
-def regist_instance(module):
-    if module.params['instance_port'] is None:
-        module.fail_json(
-            status=-1,
-            msg='missing required arguments: instance_port'
-        )
-
-    if module.params['loadbalancer_name'] is None:
-        module.fail_json(
-            status=-1,
-            msg='missing required arguments: loadbalancer_name'
-        )
-
-    if module.params['loadbalancer_port'] is None:
-        module.fail_json(
-            status=-1,
-            msg='missing required arguments: loadbalancer_port'
-        )
-
-    if is_present_in_load_balancer(module):
-        return (False, 'present')
-
-    if module.check_mode:
-        return (True, 'absent')
-
-    params = dict()
-    params['LoadBalancerName'] = module.params['loadbalancer_name']
-    params['LoadBalancerPort'] = module.params['loadbalancer_port']
-    params['InstancePort'] = module.params['instance_port']
-    params['Instances.member.1.InstanceId'] = module.params['instance_id']
-
-    res = request_to_api(module, 'GET', 'RegisterInstancesWithLoadBalancer',
-                         params)
-
-    if res['status'] == 200:
-        current_status = get_state_instance_in_load_balancer(module)
-        return (True, current_status)
-    else:
-        error_info = get_api_error(res['xml_body'])
-        module.fail_json(
-            status=-1,
-            msg='changes failed (regist_instance)',
-            error_code=error_info.get('code'),
-            error_message=error_info.get('message')
-        )
-
-
-def deregist_instance(module):
-    params = dict()
-    lbs_res = describe_load_balancers(module, params)
-    member_pattern = ('.//{{{nc}}}LoadBalancerDescriptions/{{{nc}}}member'
-                      .format(**lbs_res['xml_namespace']))
-    instance_id_pattern = ('.//{{{nc}}}InstanceId'
-                           .format(**lbs_res['xml_namespace']))
-    loadbalancer_name_pattern = ('.//{{{nc}}}LoadBalancerName'
-                                 .format(**lbs_res['xml_namespace']))
-    loadbalancer_port_pattern = ('.//{{{nc}}}LoadBalancerPort'
-                                 .format(**lbs_res['xml_namespace']))
-    instance_port_pattern = ('.//{{{nc}}}InstancePort'
-                             .format(**lbs_res['xml_namespace']))
-
-    if lbs_res['status'] == 200:
-        changed = False
-        deregister_lbs = list()
-        for member in lbs_res['xml_body'].findall(member_pattern):
-            if member.find(instance_id_pattern) is None:
-                continue
-            instance_id = member.find(instance_id_pattern).text
-            if instance_id != module.params['instance_id']:
-                continue
-
-            loadbalancer_name = member.find(loadbalancer_name_pattern).text
-            if (module.params['loadbalancer_name'] is not None and
-                    loadbalancer_name != module.params['loadbalancer_name']):
-                continue
-
-            loadbalancer_port = int(
-                member.find(loadbalancer_port_pattern).text
-            )
-            if (module.params['loadbalancer_port'] is not None and
-                    loadbalancer_port != module.params['loadbalancer_port']):
-                continue
-
-            instance_port = int(member.find(instance_port_pattern).text)
-            if (module.params['instance_port'] is not None and
-                    instance_port != module.params['instance_port']):
-                continue
-
-            if module.check_mode:
-                return (True, 'present')
-
-            params = dict()
-            params['LoadBalancerName'] = loadbalancer_name
-            params['LoadBalancerPort'] = loadbalancer_port
-            params['InstancePort'] = instance_port
-            params['Instances.member.1.InstanceId'] = module.params['instance_id']  # noqa
-
-            res = request_to_api(module, 'GET',
-                                 'DeregisterInstancesFromLoadBalancer', params)
-
-            if res['status'] == 200:
-                lb_label = '{0}:{1}->{2}'.format(loadbalancer_name,
-                                                 loadbalancer_port,
-                                                 instance_port)
-                deregister_lbs.append(lb_label)
-                changed = True
-            else:
-                error_info = get_api_error(res['xml_body'])
-                module.fail_json(
-                    status=-1,
-                    msg='changes failed (deregist_instance)',
-                    error_code=error_info.get('code'),
-                    error_message=error_info.get('message')
-                )
-        return (changed, 'absent({0})'.format(','.join(deregister_lbs)))
-    else:
-        error_info = get_api_error(lbs_res['xml_body'])
-        module.fail_json(
-            status=-1,
-            msg='get load balancers information failed',
-            error_code=error_info.get('code'),
-            error_message=error_info.get('message')
-        )
-
-
 def main():
     module = AnsibleModule(  # noqa
         argument_spec=dict(
             access_key=dict(required=True,  type='str'),
             secret_access_key=dict(required=True,  type='str', no_log=True),
             endpoint=dict(required=True,  type='str'),
-            instance_id=dict(required=True,  type='str'),
-            instance_port=dict(required=False, type='int', default=None),
-            loadbalancer_name=dict(required=False, type='str', default=None),
-            loadbalancer_port=dict(required=False, type='int', default=None),
+            loadbalancer_name=dict(required=True, type='str'),
+            loadbalancer_port=dict(required=True, type='int'),
+            instance_port=dict(required=True, type='int'),
+            balancing_type=dict(required=False, type='int', default=1),
+            network_volume=dict(required=False, type='int', default=10),
+            ip_version=dict(required=False, type='str', default='v4'),
+            accounting_type=dict(required=False, type='str', default='1'),
+            policy_type=dict(equired=False, type='str', default='standard'),
+            instance_ids=dict(required=False,  type='list', default=list()),
+            purge_instance_ids=dict(required=False, type='bool',
+                                    default=True),
+            filter_ip_addresses=dict(required=False, type='list',
+                                     default=list()),
+            filter_type=dict(required=False, type='int', default=1),
+            purge_filter_ip_addresses=dict(required=False, type='bool',
+                                           default=True),
             state=dict(required=True,  type='str'),
         ),
         supports_check_mode=True
     )
 
     goal_state = module.params['state']
-    instance_id = module.params['instance_id']
+
+    manager = LoadBalancerManager(module)
 
     if goal_state == 'present':
-        (changed, current_state) = regist_instance(module)
-    elif goal_state == 'absent':
-        (changed, current_state) = deregist_instance(module)
+        manager.ensure_present()
     else:
         module.fail_json(
             status=-1,
@@ -338,9 +407,9 @@ def main():
         )
 
     module.exit_json(
-        changed=changed,
-        instance_id=instance_id,
-        status=current_state
+        changed=manager.changed,
+        loadbalancer_name=manager.loadbalancer_name,
+        status=manager.current_state,
     )
 
 
