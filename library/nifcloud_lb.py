@@ -164,7 +164,7 @@ class LoadBalancerManager:
         elif self.current_state == 'port-not-found':
             self._register_port()
 
-        # self._sync_filter()
+        self._sync_filter()
         # self._regist_instance()
 
     def _describe_load_balancers(self, params):
@@ -287,6 +287,80 @@ class LoadBalancerManager:
                 error_code=error_info.get('code'),
                 error_message=error_info.get('message')
             )
+
+    def _sync_filter(self):
+        res = self._describe_current_load_balancers()
+
+        current_filter_type = self._parse_filter_type(res)
+        (purge_ip_list, merge_ip_list) = self._extract_filter_ip_diff(res)
+
+        if (self.filter_type == current_filter_type) \
+           and (len(purge_ip_list) == 0) and (len(merge_ip_list) == 0):
+            return
+
+        params = dict()
+        params['LoadBalancerName'] = self.loadbalancer_name
+        params['LoadBalancerPort'] = self.loadbalancer_port
+        params['InstancePort'] = self.instance_port
+        params['FilterType'] = self.filter_type
+
+        ip_no = 1
+
+        for ip in purge_ip_list:
+            params['IPAddresses.member.{0}.IPAddress'.format(ip_no)] = ip
+            addon_key = 'IPAddresses.member.{0}.AddOnFilter'.format(ip_no)
+            params[addon_key] = 'false'
+            ip_no = ip_no + 1
+
+        for ip in merge_ip_list:
+            params['IPAddresses.member.{0}.IPAddress'.format(ip_no)] = ip
+            addon_key = 'IPAddresses.member.{0}.AddOnFilter'.format(ip_no)
+            params[addon_key] = 'true'
+            ip_no = ip_no + 1
+
+        api_name = 'SetFilterForLoadBalancer'
+        res = request_to_api(self.module, 'POST', api_name, params)
+
+        if res['status'] == 200:
+            self.changed = True
+        else:
+            self._fail_request(res, 'changes failed (set_filter)')
+
+    def _parse_filter_type(self, res):
+        filter_type = 1
+
+        filter = res['xml_body'].find(
+            './/{{{nc}}}Filter'.format(**res['xml_namespace']))
+
+        if filter is not None:
+            filter_type = int(filter.find(
+                './/{{{nc}}}FilterType'.format(**res['xml_namespace'])).text)
+
+        return filter_type
+
+    def _extract_filter_ip_diff(self, res):
+        filter_ip_list = []
+
+        filter = res['xml_body'].find(
+            './/{{{nc}}}Filter'.format(**res['xml_namespace']))
+
+        if filter is not None:
+            addresses_key = './/{{{nc}}}IPAddresses/{{{nc}}}member/{{{nc}}}IPAddress'.format(**res['xml_namespace'])  # noqa
+            address_elements = filter.findall(addresses_key)
+            filter_ip_list = [x.text for x in address_elements]
+
+            # DescribeLoadBalancers returns ['*.*.*.*'] when none filter ip.
+            filter_ip_list = [x for x in filter_ip_list if x != '*.*.*.*']
+
+        purge_ip_list = []
+        if self.purge_filter_ip_addresses:
+            purge_ip_list = list(set(filter_ip_list) 
+                                 - set(self.filter_ip_addresses))
+
+        merge_ip_list = list(set(self.filter_ip_addresses)
+                             - set(filter_ip_list))
+
+        return (purge_ip_list, merge_ip_list)
 
     def _fail_request(self, response, msg):
         error_info = get_api_error(response['xml_body'])

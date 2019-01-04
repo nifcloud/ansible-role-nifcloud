@@ -28,6 +28,7 @@ sys.path.append('..')
 class TestNifcloud(unittest.TestCase):
     TARGET_PRESENT_LB = 'nifcloud_lb.LoadBalancerManager._is_present_in_load_balancer'  # noqa
     TARGET_WAIT_LB_STATUS = 'nifcloud_lb.LoadBalancerManager._wait_for_loadbalancer_status'  # noqa
+    TARGET_DESCRIBE_CURRENT = 'nifcloud_lb.LoadBalancerManager._describe_current_load_balancers'  # noqa
 
     def setUp(self):
         self.mockModule = mock.MagicMock(
@@ -86,6 +87,12 @@ class TestNifcloud(unittest.TestCase):
             return_value=mock.MagicMock(
                 status_code=200,
                 text=self.xml['createLoadBalancer']
+            ))
+
+        self.mockRequestsPostSetFilterForLoadBalancer = mock.MagicMock(
+            return_value=mock.MagicMock(
+                status_code=200,
+                text=self.xml['setFilterForLoadBalancer']
             ))
 
         self.mockRequestsPostRegisterPortWithLoadBalancer = mock.MagicMock(
@@ -430,6 +437,84 @@ class TestNifcloud(unittest.TestCase):
                 manager._register_port,
             )
 
+    # _sync_filter no change
+    def test_sync_filter_no_change(self):
+        with mock.patch('requests.post',
+                        self.mockRequestsPostSetFilterForLoadBalancer):
+
+            with mock.patch(self.TARGET_DESCRIBE_CURRENT,
+                            self.mockDescribeLoadBalancers):
+                manager = nifcloud_lb.LoadBalancerManager(self.mockModule)
+                manager._sync_filter()
+                self.assertEqual(False, manager.changed)
+
+    # _sync_filter change ip
+    def test_sync_filter_add_ip(self):
+        mockModule = mock.MagicMock(
+            params=copy.deepcopy(self.mockModule.params),
+            check_mode=True,
+        )
+        addresses = ['192.168.0.3']
+        mockModule.params['filter_ip_addresses'] = addresses
+
+        with mock.patch('requests.post',
+                        self.mockRequestsPostSetFilterForLoadBalancer):
+
+            with mock.patch(self.TARGET_DESCRIBE_CURRENT,
+                            self.mockDescribeLoadBalancers):
+                manager = nifcloud_lb.LoadBalancerManager(mockModule)
+                manager._sync_filter()
+                self.assertEqual(True, manager.changed)
+
+    # _sync_filter change filter type
+    def test_sync_filter_change_type(self):
+        mockModule = mock.MagicMock(
+            params=copy.deepcopy(self.mockModule.params),
+            check_mode=True,
+        )
+        mockModule.params['filter_type'] = 2
+
+        with mock.patch('requests.post',
+                        self.mockRequestsPostSetFilterForLoadBalancer):
+
+            with mock.patch(self.TARGET_DESCRIBE_CURRENT,
+                            self.mockDescribeLoadBalancers):
+                manager = nifcloud_lb.LoadBalancerManager(mockModule)
+                manager._sync_filter()
+                self.assertEqual(True, manager.changed)
+
+    # _sync_filter not purge
+    def test_sync_filter_not_purge(self):
+        mockModule = mock.MagicMock(
+            params=copy.deepcopy(self.mockModule.params),
+            check_mode=True,
+        )
+        addresses = ['192.168.0.1']
+        mockModule.params['filter_ip_addresses'] = addresses
+        mockModule.params['purge_filter_ip_addresses'] = False
+
+        with mock.patch('requests.post',
+                        self.mockRequestsPostSetFilterForLoadBalancer):
+
+            with mock.patch(self.TARGET_DESCRIBE_CURRENT,
+                            self.mockDescribeLoadBalancers):
+                manager = nifcloud_lb.LoadBalancerManager(mockModule)
+                manager._sync_filter()
+                self.assertEqual(False, manager.changed)
+
+    # _sync_filter internal error
+    def test_sync_filter_internal_error(self):
+        with mock.patch('requests.post',
+                        self.mockRequestsInternalServerError):
+
+            with mock.patch(self.TARGET_DESCRIBE_CURRENT,
+                            self.mockDescribeLoadBalancers):
+                manager = nifcloud_lb.LoadBalancerManager(self.mockModule)
+            self.assertRaises(
+                Exception,
+                manager._sync_filter,
+            )
+
     # absent -> present
     def test_regist_instance_absent(self):
         with mock.patch('requests.get',
@@ -679,6 +764,24 @@ nifcloud_api_response_sample = dict(
     <RequestId>ac501097-4c8d-475b-b06b-a90048ec181c</RequestId>
   </ResponseMetadata>
 </CreateLoadBalancerResponse>
+''',
+    setFilterForLoadBalancer='''
+<SetFilterForLoadBalancerResponse xmlns="https://cp.cloud.nifty.com/api/">
+  <SetFilterForLoadBalancerResult>
+    <Filter>
+      <FilterType>1</FilterType>
+      <IPAddresses>
+        <member>
+          <IPAddress>192.168.0.1</IPAddress>
+          <IPAddress>192.168.0.2</IPAddress>
+        </member>
+      </IPAddresses>
+    </Filter>
+  </SetFilterForLoadBalancerResult>
+  <ResponseMetadata>
+    <RequestId>ac501097-4c8d-475b-b06b-a90048ec181c</RequestId>
+  </ResponseMetadata>
+</SetFilterForLoadBalancerResponse>
 ''',
     registerPortWithLoadBalancer='''
 <RegisterPortWithLoadBalancerResponse xmlns="https://cp.cloud.nifty.com/api/">
