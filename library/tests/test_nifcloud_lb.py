@@ -29,6 +29,8 @@ class TestNifcloud(unittest.TestCase):
     TARGET_PRESENT_LB = 'nifcloud_lb.LoadBalancerManager._is_present_in_load_balancer'  # noqa
     TARGET_WAIT_LB_STATUS = 'nifcloud_lb.LoadBalancerManager._wait_for_loadbalancer_status'  # noqa
     TARGET_DESCRIBE_CURRENT = 'nifcloud_lb.LoadBalancerManager._describe_current_load_balancers'  # noqa
+    TARGET_REGISTER_INSTANCES = 'nifcloud_lb.LoadBalancerManager._register_instances'  # noqa
+    TARGET_DEREGISTER_INSTANCES = 'nifcloud_lb.LoadBalancerManager._deregister_instances'  # noqa
 
     def setUp(self):
         self.mockModule = mock.MagicMock(
@@ -101,13 +103,13 @@ class TestNifcloud(unittest.TestCase):
                 text=self.xml['registerPortWithLoadBalancer']
             ))
 
-        self.mockRequestsGetRegisterInstancesWithLoadBalancer = mock.MagicMock(
+        self.mockRequestsPostRegisterInstancesWithLoadBalancer = mock.MagicMock(  # noqa
             return_value=mock.MagicMock(
                 status_code=200,
                 text=self.xml['registerInstancesWithLoadBalancer']
             ))
 
-        self.mockRequestsGetDeregisterInstancesFromLoadBalancer = mock.MagicMock(  # noqa
+        self.mockRequestsPostDeregisterInstancesFromLoadBalancer = mock.MagicMock(  # noqa
             return_value=mock.MagicMock(
                 status_code=200,
                 text=self.xml['deregisterInstancesFromLoadBalancer']
@@ -121,6 +123,7 @@ class TestNifcloud(unittest.TestCase):
 
         self.mockRequestsError = mock.MagicMock(return_value=None)
         self.mockGmtime = mock.MagicMock(return_value=time.gmtime(0))
+        self.mockEmpty = mock.MagicMock()
 
         patcher = mock.patch('time.sleep')
         self.addCleanup(patcher.stop)
@@ -382,10 +385,10 @@ class TestNifcloud(unittest.TestCase):
             with mock.patch(self.TARGET_WAIT_LB_STATUS,
                             mock.MagicMock(return_value=False)):
                 manager = nifcloud_lb.LoadBalancerManager(self.mockModule)
-            self.assertRaises(
-                Exception,
-                manager._create_load_balancer,
-            )
+                self.assertRaises(
+                    Exception,
+                    manager._create_load_balancer,
+                )
 
     # _create_loadbalancer internal error
     def test_create_loadbalancer_internal_error(self):
@@ -395,10 +398,10 @@ class TestNifcloud(unittest.TestCase):
             with mock.patch(self.TARGET_WAIT_LB_STATUS,
                             mock.MagicMock(return_value=False)):
                 manager = nifcloud_lb.LoadBalancerManager(self.mockModule)
-            self.assertRaises(
-                Exception,
-                manager._create_load_balancer,
-            )
+                self.assertRaises(
+                    Exception,
+                    manager._create_load_balancer,
+                )
 
     # _register_port success
     def test_register_port_success(self):
@@ -419,10 +422,10 @@ class TestNifcloud(unittest.TestCase):
             with mock.patch(self.TARGET_WAIT_LB_STATUS,
                             mock.MagicMock(return_value=False)):
                 manager = nifcloud_lb.LoadBalancerManager(self.mockModule)
-            self.assertRaises(
-                Exception,
-                manager._register_port,
-            )
+                self.assertRaises(
+                    Exception,
+                    manager._register_port,
+                )
 
     # _register_port internal error
     def test_register_port_internal_error(self):
@@ -432,10 +435,10 @@ class TestNifcloud(unittest.TestCase):
             with mock.patch(self.TARGET_WAIT_LB_STATUS,
                             mock.MagicMock(return_value=False)):
                 manager = nifcloud_lb.LoadBalancerManager(self.mockModule)
-            self.assertRaises(
-                Exception,
-                manager._register_port,
-            )
+                self.assertRaises(
+                    Exception,
+                    manager._register_port,
+                )
 
     # _sync_filter no change
     def test_sync_filter_no_change(self):
@@ -449,10 +452,11 @@ class TestNifcloud(unittest.TestCase):
                 self.assertEqual(False, manager.changed)
 
     # _sync_filter change ip
-    def test_sync_filter_add_ip(self):
+    def test_sync_filter_change_ip(self):
         mockModule = mock.MagicMock(
             params=copy.deepcopy(self.mockModule.params),
-            check_mode=True,
+            fail_json=self.mockModule.fail_json,
+            check_mode=False,
         )
         addresses = ['192.168.0.3']
         mockModule.params['filter_ip_addresses'] = addresses
@@ -470,7 +474,8 @@ class TestNifcloud(unittest.TestCase):
     def test_sync_filter_change_type(self):
         mockModule = mock.MagicMock(
             params=copy.deepcopy(self.mockModule.params),
-            check_mode=True,
+            fail_json=self.mockModule.fail_json,
+            check_mode=False,
         )
         mockModule.params['filter_type'] = 2
 
@@ -487,9 +492,10 @@ class TestNifcloud(unittest.TestCase):
     def test_sync_filter_not_purge(self):
         mockModule = mock.MagicMock(
             params=copy.deepcopy(self.mockModule.params),
-            check_mode=True,
+            fail_json=self.mockModule.fail_json,
+            check_mode=False,
         )
-        addresses = ['192.168.0.1']
+        addresses = []
         mockModule.params['filter_ip_addresses'] = addresses
         mockModule.params['purge_filter_ip_addresses'] = False
 
@@ -504,65 +510,121 @@ class TestNifcloud(unittest.TestCase):
 
     # _sync_filter internal error
     def test_sync_filter_internal_error(self):
+        mockModule = mock.MagicMock(
+            params=copy.deepcopy(self.mockModule.params),
+            fail_json=self.mockModule.fail_json,
+            check_mode=False,
+        )
+        addresses = ['192.168.0.1']
+        mockModule.params['filter_ip_addresses'] = addresses
+
         with mock.patch('requests.post',
                         self.mockRequestsInternalServerError):
 
             with mock.patch(self.TARGET_DESCRIBE_CURRENT,
                             self.mockDescribeLoadBalancers):
-                manager = nifcloud_lb.LoadBalancerManager(self.mockModule)
-            self.assertRaises(
-                Exception,
-                manager._sync_filter,
-            )
-
-    # absent -> present
-    def test_regist_instance_absent(self):
-        with mock.patch('requests.get',
-                        self.mockRequestsGetRegisterInstancesWithLoadBalancer):
-
-            with mock.patch(self.TARGET_PRESENT_LB,
-                            mock.MagicMock(return_value=False)):
-                manager = nifcloud_lb.LoadBalancerManager(self.mockModule)
-                self.assertEqual(
-                    (True, 'present'),
-                    manager._regist_instance()
-                )
-
-    # present -> present
-    def test_regist_instance_present(self):
-        with mock.patch('requests.get',
-                        self.mockRequestsGetRegisterInstancesWithLoadBalancer):
-            with mock.patch(self.TARGET_PRESENT_LB,
-                            mock.MagicMock(return_value=True)):
-                manager = nifcloud_lb.LoadBalancerManager(self.mockModule)
-                self.assertEqual(
-                    (False, 'present'),
-                    manager._regist_instance()
-                )
-
-    # absent -> present (check mode)
-    def test_regist_instance_check_mode(self):
-        mockModule = mock.MagicMock(
-            params=copy.deepcopy(self.mockModule.params),
-            check_mode=True,
-        )
-        manager = nifcloud_lb.LoadBalancerManager(mockModule)
-        self.assertEqual(
-            (True, 'absent'),
-            manager._regist_instance()
-        )
-
-    # internal server error
-    def test_regist_instance_error(self):
-        with mock.patch('requests.get', self.mockRequestsInternalServerError):
-            with mock.patch(self.TARGET_PRESENT_LB,
-                            mock.MagicMock(return_value=False)):
-                manager = nifcloud_lb.LoadBalancerManager(self.mockModule)
+                manager = nifcloud_lb.LoadBalancerManager(mockModule)
                 self.assertRaises(
                     Exception,
-                    manager._regist_instance,
-                    (self.mockModule)
+                    manager._sync_filter,
                 )
+
+    # _sync_instances no change
+    def test_sync_instances_no_change(self):
+        with mock.patch(self.TARGET_DESCRIBE_CURRENT,
+                        self.mockDescribeLoadBalancers):
+            with mock.patch(self.TARGET_REGISTER_INSTANCES,
+                            self.mockEmpty):
+                with mock.patch(self.TARGET_DEREGISTER_INSTANCES,
+                                self.mockEmpty):
+
+                    manager = nifcloud_lb.LoadBalancerManager(self.mockModule)
+                    manager._sync_instances()
+                    self.assertEqual(False, manager.changed)
+
+    # _sync_instances register instance
+    def test_sync_instances_register_instance(self):
+        mockModule = mock.MagicMock(
+            params=copy.deepcopy(self.mockModule.params),
+            fail_json=self.mockModule.fail_json,
+            check_mode=False,
+        )
+        instance_ids = ['test001', 'test002']
+        mockModule.params['instance_ids'] = instance_ids
+
+        with mock.patch(self.TARGET_DESCRIBE_CURRENT,
+                        self.mockDescribeLoadBalancers):
+            with mock.patch('requests.post',
+                            self.mockRequestsPostRegisterInstancesWithLoadBalancer):  # noqa
+                with mock.patch(self.TARGET_DEREGISTER_INSTANCES,
+                                self.mockEmpty):
+
+                    manager = nifcloud_lb.LoadBalancerManager(mockModule)
+                    manager._sync_instances()
+                    self.assertEqual(True, manager.changed)
+
+    # _sync_instances deregister instance
+    def test_sync_instances_deregister_instance(self):
+        mockModule = mock.MagicMock(
+            params=copy.deepcopy(self.mockModule.params),
+            fail_json=self.mockModule.fail_json,
+            check_mode=False,
+        )
+        instance_ids = []
+        mockModule.params['instance_ids'] = instance_ids
+
+        with mock.patch(self.TARGET_DESCRIBE_CURRENT,
+                        self.mockDescribeLoadBalancers):
+            with mock.patch(self.TARGET_REGISTER_INSTANCES,
+                            self.mockEmpty):
+                with mock.patch('requests.post',
+                                self.mockRequestsPostDeregisterInstancesFromLoadBalancer):  # noqa
+
+                    manager = nifcloud_lb.LoadBalancerManager(mockModule)
+                    manager._sync_instances()
+                    self.assertEqual(True, manager.changed)
+
+    # _sync_instances not purge
+    def test_sync_instances_not_purge(self):
+        mockModule = mock.MagicMock(
+            params=copy.deepcopy(self.mockModule.params),
+            fail_json=self.mockModule.fail_json,
+            check_mode=False,
+        )
+        instance_ids = []
+        mockModule.params['instance_ids'] = instance_ids
+        mockModule.params['purge_instance_ids'] = False
+
+        with mock.patch(self.TARGET_DESCRIBE_CURRENT,
+                        self.mockDescribeLoadBalancers):
+            with mock.patch(self.TARGET_REGISTER_INSTANCES,
+                            self.mockEmpty):
+                with mock.patch('requests.post',
+                                self.mockRequestsPostDeregisterInstancesFromLoadBalancer):  # noqa
+
+                    manager = nifcloud_lb.LoadBalancerManager(mockModule)
+                    manager._sync_instances()
+                    self.assertEqual(False, manager.changed)
+
+    # _register_instances internal error
+    def test_register_instances_internal_error(self):
+        with mock.patch('requests.post',
+                        self.mockRequestsPostRegisterInstancesWithLoadBalancer):  # noqa
+            manager = nifcloud_lb.LoadBalancerManager(self.mockModule)
+            self.assertRaises(
+                Exception,
+                manager._register_instances,
+            )
+
+    # _deregister_instances internal error
+    def test_deregister_instances_internal_error(self):
+        with mock.patch('requests.post',
+                        self.mockRequestsPostDeregisterInstancesFromLoadBalancer):  # noqa
+            manager = nifcloud_lb.LoadBalancerManager(self.mockModule)
+            self.assertRaises(
+                Exception,
+                manager._deregister_instances,
+            )
 
 
 nifcloud_api_response_sample = dict(
