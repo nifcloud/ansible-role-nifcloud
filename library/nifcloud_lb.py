@@ -155,6 +155,7 @@ class LoadBalancerManager:
 
         self.current_state = ''
         self.changed = False
+        self.result = dict()
 
     def ensure_present(self):
         self.current_state = self._get_state_instance_in_load_balancer()
@@ -210,6 +211,14 @@ class LoadBalancerManager:
         params['AccountingType'] = self.accounting_type
         params['PolicyType'] = self.policy_type
 
+        self.result['create_load_balancer'] = dict(
+            loadbalancer_name=self.loadbalancer_name,
+        )
+
+        if self.module.check_mode:
+            self.changed = True
+            return
+
         api_name = 'CreateLoadBalancer'
         res = request_to_api(self.module, 'POST', api_name, params)
 
@@ -228,6 +237,16 @@ class LoadBalancerManager:
         params['Listeners.member.1.LoadBalancerPort'] = self.loadbalancer_port
         params['Listeners.member.1.InstancePort'] = self.instance_port
         params['Listeners.member.1.BalancingType'] = self.balancing_type
+
+        self.result['register_port'] = dict(
+            loadbalancer_name=self.loadbalancer_name,
+            loadbalancer_port=self.loadbalancer_port,
+            instance_port=self.instance_port,
+        )
+
+        if self.module.check_mode:
+            self.changed = True
+            return
 
         api_name = 'RegisterPortWithLoadBalancer'
         res = request_to_api(self.module, 'POST', api_name, params)
@@ -298,6 +317,12 @@ class LoadBalancerManager:
            and (len(purge_ip_list) == 0) and (len(merge_ip_list) == 0):
             return
 
+        self.result['sync_filter'] = dict(
+            purge_filter_ip_addresses=purge_ip_list,
+            merge_filter_ip_addresses=merge_ip_list,
+            filter_type=self.filter_type,
+        )
+
         params = dict()
         params['LoadBalancerName'] = self.loadbalancer_name
         params['LoadBalancerPort'] = self.loadbalancer_port
@@ -317,6 +342,10 @@ class LoadBalancerManager:
             addon_key = 'IPAddresses.member.{0}.AddOnFilter'.format(ip_no)
             params[addon_key] = 'true'
             ip_no = ip_no + 1
+
+        if self.module.check_mode:
+            self.changed = True
+            return
 
         api_name = 'SetFilterForLoadBalancer'
         res = request_to_api(self.module, 'POST', api_name, params)
@@ -482,8 +511,8 @@ def main():
 
     module.exit_json(
         changed=manager.changed,
-        loadbalancer_name=manager.loadbalancer_name,
         status=manager.current_state,
+        **manager.result
     )
 
 
