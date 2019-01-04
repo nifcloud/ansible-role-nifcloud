@@ -166,7 +166,7 @@ class LoadBalancerManager:
             self._register_port()
 
         self._sync_filter()
-        # self._regist_instance()
+        self._sync_instances()
 
     def _describe_load_balancers(self, params):
         return request_to_api(self.module, 'GET', 'DescribeLoadBalancers',
@@ -274,44 +274,11 @@ class LoadBalancerManager:
 
         return self.current_state == goal_state
 
-    def _regist_instance(self):
-        if self._is_present_in_load_balancer():
-            return (False, 'present')
-
-        if self.module.check_mode:
-            return (True, 'absent')
-
-        params = dict()
-        params['LoadBalancerName'] = self.loadbalancer_name
-        params['LoadBalancerPort'] = self.loadbalancer_port
-        params['InstancePort'] = self.instance_port
-
-        instance_no = 1
-        for instance_id in self.instance_ids:
-            key = 'Instances.member.{0}.InstanceId'.format(instance_no)
-            params[key] = instance_id
-            instance_no = instance_no + 1
-
-        res = request_to_api(self.module, 'GET',
-                             'RegisterInstancesWithLoadBalancer', params)
-
-        if res['status'] == 200:
-            current_status = self._get_state_instance_in_load_balancer()
-            return (True, current_status)
-        else:
-            error_info = get_api_error(res['xml_body'])
-            self.module.fail_json(
-                status=-1,
-                msg='changes failed (regist_instance)',
-                error_code=error_info.get('code'),
-                error_message=error_info.get('message')
-            )
-
     def _sync_filter(self):
-        res = self._describe_current_load_balancers()
+        res_desc = self._describe_current_load_balancers()
 
-        current_filter_type = self._parse_filter_type(res)
-        (purge_ip_list, merge_ip_list) = self._extract_filter_ip_diff(res)
+        current_filter_type = self._parse_filter_type(res_desc)
+        (purge_ip_list, merge_ip_list) = self._extract_filter_ip_diff(res_desc)
 
         if (self.filter_type == current_filter_type) \
            and (len(purge_ip_list) == 0) and (len(merge_ip_list) == 0):
@@ -348,12 +315,12 @@ class LoadBalancerManager:
             return
 
         api_name = 'SetFilterForLoadBalancer'
-        res = request_to_api(self.module, 'POST', api_name, params)
+        res_post = request_to_api(self.module, 'POST', api_name, params)
 
-        if res['status'] == 200:
+        if res_post['status'] == 200:
             self.changed = True
         else:
-            self._fail_request(res, 'changes failed (set_filter)')
+            self._fail_request(res_post, 'changes failed (set_filter)')
 
     def _parse_filter_type(self, res):
         filter_type = 1
@@ -383,13 +350,93 @@ class LoadBalancerManager:
 
         purge_ip_list = []
         if self.purge_filter_ip_addresses:
-            purge_ip_list = list(set(filter_ip_list) 
+            purge_ip_list = list(set(filter_ip_list)
                                  - set(self.filter_ip_addresses))
 
         merge_ip_list = list(set(self.filter_ip_addresses)
                              - set(filter_ip_list))
 
         return (purge_ip_list, merge_ip_list)
+
+    def _sync_instances(self):
+        res = self._describe_current_load_balancers()
+
+        (deregister_instance_ids, register_instance_ids) = \
+            self._extract_instance_ids_diff(res)
+
+        if (len(deregister_instance_ids) == 0) \
+           and (len(register_instance_ids) == 0):
+            return
+
+        self.result['sync_instances'] = dict(
+            deregister_instance_ids=deregister_instance_ids,
+            register_instance_ids=register_instance_ids,
+        )
+
+        if self.module.check_mode:
+            self.changed = True
+            return
+
+        if len(register_instance_ids) != 0:
+            self._register_instances(register_instance_ids)
+
+        if len(deregister_instance_ids) != 0:
+            self._deregister_instances(deregister_instance_ids)
+
+    def _extract_instance_ids_diff(self, res):
+        instance_ids_key = './/{{{nc}}}Instances/{{{nc}}}member/{{{nc}}}InstanceId'.format(**res['xml_namespace'])  # noqa
+        instance_ids_elements = res['xml_body'].findall(instance_ids_key)
+        instance_ids = [x.text for x in instance_ids_elements]
+
+        deregister_instance_ids = []
+        if self.purge_instance_ids:
+            deregister_instance_ids = list(set(instance_ids)
+                                           - set(self.instance_ids))
+
+        register_instance_ids = list(set(self.instance_ids)
+                                     - set(instance_ids))
+
+        return (deregister_instance_ids, register_instance_ids)
+
+    def _register_instances(self, instance_ids):
+        params = dict()
+        params['LoadBalancerName'] = self.loadbalancer_name
+        params['LoadBalancerPort'] = self.loadbalancer_port
+        params['InstancePort'] = self.instance_port
+
+        instance_no = 1
+        for instance_id in instance_ids:
+            key = 'Instances.member.{0}.InstanceId'.format(instance_no)
+            params[key] = instance_id
+            instance_no = instance_no + 1
+
+        api_name = 'RegisterInstancesWithLoadBalancer'
+        res = request_to_api(self.module, 'POST', api_name, params)
+
+        if res['status'] == 200:
+            self.changed = True
+        else:
+            self._fail_request(res, 'changes failed (register_instances)')
+
+    def _deregister_instances(self, instance_ids):
+        params = dict()
+        params['LoadBalancerName'] = self.loadbalancer_name
+        params['LoadBalancerPort'] = self.loadbalancer_port
+        params['InstancePort'] = self.instance_port
+
+        instance_no = 1
+        for instance_id in instance_ids:
+            key = 'Instances.member.{0}.InstanceId'.format(instance_no)
+            params[key] = instance_id
+            instance_no = instance_no + 1
+
+        api_name = 'DeregisterInstancesFromLoadBalancer'
+        res = request_to_api(self.module, 'POST', api_name, params)
+
+        if res['status'] == 200:
+            self.changed = True
+        else:
+            self._fail_request(res, 'changes failed (deregister_instances)')
 
     def _fail_request(self, response, msg):
         error_info = get_api_error(response['xml_body'])
