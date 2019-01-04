@@ -75,17 +75,17 @@ options:
         default: 10
     ip_version:
         description:
-            - IP version (v4 or v6)
+            - IP version ("v4" or "v6")
         required: false
         default: 'v4'
     accounting_type:
         description:
-            - Accounting type (1: monthly, 2: pay per use)
+            - Accounting type ("1": monthly, "2": pay per use)
         required: false
         default: 'v4'
     policy_type:
         description:
-            - Encryption policy type (standard or ats)
+            - Encryption policy type ("standard" or "ats")
         required: false
         default: 'standard'
     instance_ids:
