@@ -82,7 +82,7 @@ options:
         description:
             - Accounting type ("1": monthly, "2": pay per use)
         required: false
-        default: 'v4'
+        default: '1'
     policy_type:
         description:
             - Encryption policy type ("standard" or "ats")
@@ -91,7 +91,8 @@ options:
     instance_ids:
         description:
             - List of Instance ID
-        required: true
+        required: false
+        default: []
     purge_instance_ids:
         description:
             - Purge existing instance ids that are not found in instance_ids
@@ -100,10 +101,12 @@ options:
     filter_ip_addresses:
         description:
             - List of ip addresses that allows/denys incoming communication to resources
-        default: null
+        required: false
+        default: []
     filter_type:
         description:
             - Filter type that switch to allows/denys for filter ip addresses (1: allow or 2: deny)
+        required: false
         default: 1
     purge_filter_ip_addresses:
         description:
