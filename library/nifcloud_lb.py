@@ -113,6 +113,21 @@ options:
             - Purge existing filter ip addresses that are not found in filter_ip_addresses
         required: false
         default: true
+    health_check_target:
+        description:
+            - Health check protocol and port
+        required: false
+        default: 'ICMP'
+    health_check_interval:
+        description:
+            - Interval of health check (second)
+        required: false
+        default: 5
+    health_check_unhealthy_threshold:
+        description:
+            - Threshold of unhealthy
+        required: false
+        default: 1
     state:
         description:
             - Goal status (only "present")
@@ -125,6 +140,36 @@ EXAMPLES = '''
 
 
 ISO8601 = '%Y-%m-%dT%H:%M:%SZ'
+
+
+class LoadBalancerHealthCheck:
+    """Model of NIFCLOUD LoadBalancer HealthCheck """
+
+    def __init__(self, target='ICMP', interval=5, unhealthy_threshold=1):
+        self.target = target
+        self.interval = interval
+        self.unhealthy_threshold = unhealthy_threshold
+
+    def __eq__(self, other):
+        if other is None or type(self) != type(other):
+            return False
+
+        return self.__dict__ == other.__dict__
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+    def parse_describe(self, res):
+        health_check = res['xml_body'].find(
+            './/{{{nc}}}HealthCheck'.format(**res['xml_namespace']))
+
+        if health_check is not None:
+            self.target = health_check.find(
+                './/{{{nc}}}Target'.format(**res['xml_namespace'])).text
+            self.interval = int(health_check.find(
+                './/{{{nc}}}Interval'.format(**res['xml_namespace'])).text)
+            self.unhealthy_threshold = int(health_check.find(
+                './/{{{nc}}}UnhealthyThreshold'.format(**res['xml_namespace'])).text)  # noqa
 
 
 class LoadBalancerManager:
@@ -154,6 +199,9 @@ class LoadBalancerManager:
         self.filter_ip_addresses = module.params['filter_ip_addresses']
         self.filter_type = module.params['filter_type']
         self.purge_filter_ip_addresses = module.params['purge_filter_ip_addresses']  # noqa
+        self.health_check_target = module.params['health_check_target']
+        self.health_check_interval = module.params['health_check_interval']
+        self.health_check_unhealthy_threshold = module.params['health_check_unhealthy_threshold']  # noqa
         self.state = module.params['state']
 
         self.current_state = ''
@@ -169,6 +217,7 @@ class LoadBalancerManager:
             self._register_port()
 
         self._sync_filter()
+        self._sync_health_check()
         self._sync_instances()
 
     def _describe_load_balancers(self, params):
@@ -361,6 +410,47 @@ class LoadBalancerManager:
 
         return (purge_ip_list, merge_ip_list)
 
+    def _sync_health_check(self):
+        res_desc = self._describe_current_load_balancers()
+
+        current = LoadBalancerHealthCheck()
+        current.parse_describe(res_desc)
+
+        change = LoadBalancerHealthCheck(
+                    target=self.health_check_target,
+                    interval=self.health_check_interval,
+                    unhealthy_threshold=self.health_check_unhealthy_threshold,
+                )
+
+        if current == change:
+            return
+
+        self.result['sync_health_check'] = dict(
+            health_check_target=change.target,
+            health_check_interval=change.interval,
+            health_check_unhealthy_threshold=change.unhealthy_threshold,
+        )
+
+        if self.module.check_mode:
+            self.changed = True
+            return
+
+        params = dict()
+        params['LoadBalancerName'] = self.loadbalancer_name
+        params['LoadBalancerPort'] = self.loadbalancer_port
+        params['InstancePort'] = self.instance_port
+        params['HealthCheck.Target'] = change.target
+        params['HealthCheck.Interval'] = change.interval
+        params['HealthCheck.UnhealthyThreshold'] = change.unhealthy_threshold
+
+        api_name = 'ConfigureHealthCheck'
+        res_post = request_to_api(self.module, 'POST', api_name, params)
+
+        if res_post['status'] == 200:
+            self.changed = True
+        else:
+            self._fail_request(res_post, 'changes failed (sync_health_check)')
+
     def _sync_instances(self):
         res = self._describe_current_load_balancers()
 
@@ -542,6 +632,11 @@ def main():
             filter_type=dict(required=False, type='int', default=1),
             purge_filter_ip_addresses=dict(required=False, type='bool',
                                            default=True),
+            health_check_target=dict(required=False, type='str',
+                                     default='ICMP'),
+            health_check_interval=dict(required=False, type='int', default=5),
+            health_check_unhealthy_threshold=dict(required=False, type='int',
+                                                  default=1),
             state=dict(required=True,  type='str'),
         ),
         supports_check_mode=True

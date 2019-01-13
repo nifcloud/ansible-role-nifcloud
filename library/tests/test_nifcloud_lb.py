@@ -51,6 +51,9 @@ class TestNifcloud(unittest.TestCase):
                 filter_ip_addresses=['192.168.0.1', '192.168.0.2'],
                 filter_type=1,
                 purge_filter_ip_addresses=True,
+                health_check_target='TCP:80',
+                health_check_interval=300,
+                health_check_unhealthy_threshold=3,
                 state='present'
             ),
             fail_json=mock.MagicMock(side_effect=Exception('failed')),
@@ -113,6 +116,12 @@ class TestNifcloud(unittest.TestCase):
             return_value=mock.MagicMock(
                 status_code=200,
                 text=self.xml['deregisterInstancesFromLoadBalancer']
+            ))
+
+        self.mockRequestsPostConfigureHealthCheck = mock.MagicMock(  # noqa
+            return_value=mock.MagicMock(
+                status_code=200,
+                text=self.xml['configureHealthCheck']
             ))
 
         self.mockRequestsInternalServerError = mock.MagicMock(
@@ -626,6 +635,58 @@ class TestNifcloud(unittest.TestCase):
                 manager._deregister_instances,
             )
 
+    # _health_check no change
+    def test_sync_health_check_no_change(self):
+        with mock.patch('requests.post',
+                        self.mockRequestsPostConfigureHealthCheck):
+
+            with mock.patch(self.TARGET_DESCRIBE_CURRENT,
+                            self.mockDescribeLoadBalancers):
+                manager = nifcloud_lb.LoadBalancerManager(self.mockModule)
+                manager._sync_health_check()
+                self.assertEqual(False, manager.changed)
+
+    # _sync_helth_check changed
+    def test_sync_health_check_changed(self):
+        mockModule = mock.MagicMock(
+            params=copy.deepcopy(self.mockModule.params),
+            fail_json=self.mockModule.fail_json,
+            check_mode=False,
+        )
+        mockModule.params['health_check_target'] = 'ICMP'
+        mockModule.params['health_check_interval'] = 5
+        mockModule.params['health_check_unhealthy_threshold'] = 10
+
+        with mock.patch('requests.post',
+                        self.mockRequestsPostConfigureHealthCheck):
+
+            with mock.patch(self.TARGET_DESCRIBE_CURRENT,
+                            self.mockDescribeLoadBalancers):
+                manager = nifcloud_lb.LoadBalancerManager(mockModule)
+                manager._sync_health_check()
+                self.assertEqual(True, manager.changed)
+
+    # _sync_health_checl internal error
+    def test_sync_health_check_internal_error(self):
+        mockModule = mock.MagicMock(
+            params=copy.deepcopy(self.mockModule.params),
+            fail_json=self.mockModule.fail_json,
+            check_mode=False,
+        )
+
+        mockModule.params['health_check_target'] = 'ICMP'
+
+        with mock.patch('requests.post',
+                        self.mockRequestsInternalServerError):
+
+            with mock.patch(self.TARGET_DESCRIBE_CURRENT,
+                            self.mockDescribeLoadBalancers):
+                manager = nifcloud_lb.LoadBalancerManager(mockModule)
+                self.assertRaises(
+                    Exception,
+                    manager._sync_health_check,
+                )
+
 
 nifcloud_api_response_sample = dict(
     describeLoadBalancers='''
@@ -876,6 +937,22 @@ nifcloud_api_response_sample = dict(
     <RequestId>f6dd8353-eb6b-6b4fd32e4f05</RequestId>
   </ResponseMetadata>
 </DeregisterInstancesFromLoadBalancerResponse>
+''',  # noqa
+    configureHealthCheck='''
+<ConfigureHealthCheckResponse xmlns="https://cp.cloud.nifty.com/api/">
+  <ConfigureHealthCheckResult>
+    <HealthCheck>
+      <Target>ICMP</Target>
+      <Interval>5</Interval>
+      <Timeout>900</Timeout>
+      <UnhealthyThreshold>1</UnhealthyThreshold>
+      <HealthyThreshold>1</HealthyThreshold>
+    </HealthCheck>
+  </ConfigureHealthCheckResult>
+  <ResponseMetadata>
+    <RequestId>ac501097-4c8d-475b-b06b-a90048ec181c</RequestId>
+  </ResponseMetadata>
+</ConfigureHealthCheckResponse>
 ''',  # noqa
     internalServerError='''
 <Response>

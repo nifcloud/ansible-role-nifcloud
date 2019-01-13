@@ -16,25 +16,28 @@ Create, update filter, register/deregister instances a load balancer of NIFCLOUD
 
 ## Options
 
-| parameter                 | required | default    | type | choices               | comments                                                                              |
-|---------------------------|----------|------------|------|-----------------------|---------------------------------------------------------------------------------------|
-| access_key                | yes      |            | str  |                       | NIFCLOUD API access key                                                               |
-| secret_access_key         | yes      |            | str  |                       | NIFCLOUD API secret access key                                                        |
-| endpoint                  | yes      |            | str  |                       | API endpoint of target region                                                         |
-| loadbalancer_name         | yes      |            | str  |                       | Target Load Balancer Name (required for registration)                                 |
-| loadbalancer_port         | yes      |            | int  |                       | Target Load Balancer Port (required for registration)                                 |
-| instance_port             | yes      |            | int  |                       | Destination Port  (required for registraiton)                                         |
-| balancing_type            | no       | 1          | int  |                       | Balancing type (1: Round-Robin or 2: Least-Connection)                                |
-| network_volume            | no       | 10         | int  |                       | Maximum of network volume                                                             |
-| ip_version                | no       | "v4"       | str  |                       | IP version ("v4" or "v6")                                                             |
-| accounting_type           | no       | "1"        | str  |                       | Accounting type ("1": monthly, "2": pay per use)                                      |
-| policy_type               | no       | "standard" | str  |                       | Encryption policy type ("standard" or "ats")                                          |
-| instance_ids              | no       | []         | list |                       | List of Instance ID                                                                   |
-| purge_instance_ids        | no       | True       | bool |                       | Purge existing instance ids that are not found in instance_ids                        |
-| filter_ip_addresses       | no       | []         | list |                       | List of ip addresses that allows/denys incoming communication to resources            |
-| filter_type               | no       | 1          | int  |                       | Filter type that switch to allows/denys for filter ip addresses (1: allow or 2: deny) |
-| purge_filter_ip_addresses | no       | True       | bool |                       | Purge existing filter ip addresses that are not found in filter_ip_addresses          |
-| state                     | yes      |            | str  | "present" only        | Goal status                                                                           |
+| parameter                        | required | default    | type | choices               | comments                                                                              |
+|----------------------------------|----------|------------|------|-----------------------|---------------------------------------------------------------------------------------|
+| access_key                       | yes      |            | str  |                       | NIFCLOUD API access key                                                               |
+| secret_access_key                | yes      |            | str  |                       | NIFCLOUD API secret access key                                                        |
+| endpoint                         | yes      |            | str  |                       | API endpoint of target region                                                         |
+| loadbalancer_name                | yes      |            | str  |                       | Target Load Balancer Name (required for registration)                                 |
+| loadbalancer_port                | yes      |            | int  |                       | Target Load Balancer Port (required for registration)                                 |
+| instance_port                    | yes      |            | int  |                       | Destination Port  (required for registraiton)                                         |
+| balancing_type                   | no       | 1          | int  |                       | Balancing type (1: Round-Robin or 2: Least-Connection)                                |
+| network_volume                   | no       | 10         | int  |                       | Maximum of network volume                                                             |
+| ip_version                       | no       | "v4"       | str  |                       | IP version ("v4" or "v6")                                                             |
+| accounting_type                  | no       | "1"        | str  |                       | Accounting type ("1": monthly, "2": pay per use)                                      |
+| policy_type                      | no       | "standard" | str  |                       | Encryption policy type ("standard" or "ats")                                          |
+| instance_ids                     | no       | []         | list |                       | List of Instance ID                                                                   |
+| purge_instance_ids               | no       | True       | bool |                       | Purge existing instance ids that are not found in instance_ids                        |
+| filter_ip_addresses              | no       | []         | list |                       | List of ip addresses that allows/denys incoming communication to resources            |
+| filter_type                      | no       | 1          | int  |                       | Filter type that switch to allows/denys for filter ip addresses (1: allow or 2: deny) |
+| purge_filter_ip_addresses        | no       | True       | bool |                       | Purge existing filter ip addresses that are not found in filter_ip_addresses          |
+| health_check_target              | no       | "ICMP"     | str  |                       | Health check protocol and port                                                        |
+| health_check_interval            | no       | 5          | int  |                       | Interval of health check (second)                                                     |
+| health_check_unhealthy_threshold | no       | 1          | int  |                       | Threshold of unhealthy                                                                |
+| state                            | yes      |            | str  | "present" only        | Goal status                                                                           |
 
 ## Examples
 
