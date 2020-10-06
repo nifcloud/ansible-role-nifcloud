@@ -224,6 +224,7 @@ class LoadBalancerManager:
 
         self._sync_filter()
         self._sync_health_check()
+        self._sync_ssl_policy()
         self._sync_instances()
 
     def _describe_load_balancers(self, params):
@@ -456,6 +457,47 @@ class LoadBalancerManager:
             self.changed = True
         else:
             self._fail_request(res_post, 'changes failed (sync_health_check)')
+
+    def _sync_ssl_policy(self):
+        res = self._describe_current_load_balancers()
+
+        ssl_policy = res['xml_body'].find(
+            './/{{{nc}}}SSLPolicy'.format(**res['xml_namespace']))
+        
+        current = ''
+        if ssl_policy is not None:
+            current = ssl_policy.find(
+                './/{{{nc}}}SSLPolicyName'.format(**res['xml_namespace'])).text
+
+        if current == self.ssl_policy_name:
+            return
+
+        self.result['sync_ssl_policy'] = dict(
+            ssl_policy_name=self.ssl_policy_name,
+        )
+
+        if self.module.check_mode:
+            self.changed = True
+            return
+
+        params = dict()
+        params['LoadBalancerName'] = self.loadbalancer_name
+        params['LoadBalancerPort'] = self.loadbalancer_port
+        params['InstancePort'] = self.instance_port
+
+        api_name = ''
+        if self.ssl_policy_name:
+            params['SSLPolicyName'] = self.ssl_policy_name
+            api_name = 'NiftySetLoadBalancerSSLPoliciesOfListener'
+        else:
+            api_name = 'NiftyUnsetLoadBalancerSSLPoliciesOfListener'
+
+        res_post = request_to_api(self.module, 'POST', api_name, params)
+
+        if res_post['status'] == 200:
+            self.changed = True
+        else:
+            self._fail_request(res_post, 'changes failed (sync_ssl_policy)')
 
     def _sync_instances(self):
         res = self._describe_current_load_balancers()

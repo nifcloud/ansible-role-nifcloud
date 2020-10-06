@@ -54,6 +54,7 @@ class TestNifcloud(unittest.TestCase):
                 health_check_target='TCP:80',
                 health_check_interval=300,
                 health_check_unhealthy_threshold=3,
+                ssl_policy_name='',
                 state='present'
             ),
             fail_json=mock.MagicMock(side_effect=Exception('failed')),
@@ -687,6 +688,54 @@ class TestNifcloud(unittest.TestCase):
                     manager._sync_health_check,
                 )
 
+    # _sync_ssl_policy no change
+    def test_sync_ssl_policy_no_change(self):
+        with mock.patch('requests.post',
+                        self.mockRequestsPostConfigureHealthCheck):
+
+            with mock.patch(self.TARGET_DESCRIBE_CURRENT,
+                            self.mockDescribeLoadBalancers):
+                manager = nifcloud_lb.LoadBalancerManager(self.mockModule)
+                manager._sync_ssl_policy()
+                self.assertEqual(False, manager.changed)
+
+    # _sync_ssl_policy changed
+    def test_sync_ssl_policy_changed(self):
+        mockModule = mock.MagicMock(
+            params=copy.deepcopy(self.mockModule.params),
+            fail_json=self.mockModule.fail_json,
+            check_mode=False,
+        )
+        mockModule.params['ssl_policy_name'] = 'Standard Ciphers A ver1'
+
+        with mock.patch('requests.post',
+                        self.mockRequestsPostConfigureHealthCheck):
+
+            with mock.patch(self.TARGET_DESCRIBE_CURRENT,
+                            self.mockDescribeLoadBalancers):
+                manager = nifcloud_lb.LoadBalancerManager(mockModule)
+                manager._sync_ssl_policy()
+                self.assertEqual(True, manager.changed)
+
+    # _sync_ssl_policy internal error
+    def test_sync_ssl_policy_internal_error(self):
+        mockModule = mock.MagicMock(
+            params=copy.deepcopy(self.mockModule.params),
+            fail_json=self.mockModule.fail_json,
+            check_mode=False,
+        )
+        mockModule.params['ssl_policy_name'] = 'Standard Ciphers A ver1'
+
+        with mock.patch('requests.post',
+                        self.mockRequestsInternalServerError):
+
+            with mock.patch(self.TARGET_DESCRIBE_CURRENT,
+                            self.mockDescribeLoadBalancers):
+                manager = nifcloud_lb.LoadBalancerManager(mockModule)
+                self.assertRaises(
+                    Exception,
+                    manager._sync_ssl_policy,
+                )
 
 nifcloud_api_response_sample = dict(
     describeLoadBalancers='''
