@@ -128,6 +128,11 @@ options:
             - Threshold of unhealthy
         required: false
         default: 1
+    ssl_policy_name:
+        description:
+            - SSL policy template name
+        required: false
+        default: ''
     state:
         description:
             - Goal status (only "present")
@@ -202,6 +207,7 @@ class LoadBalancerManager:
         self.health_check_target = module.params['health_check_target']
         self.health_check_interval = module.params['health_check_interval']
         self.health_check_unhealthy_threshold = module.params['health_check_unhealthy_threshold']  # noqa
+        self.ssl_policy_name = module.params['ssl_policy_name']
         self.state = module.params['state']
 
         self.current_state = ''
@@ -637,6 +643,7 @@ def main():
             health_check_interval=dict(required=False, type='int', default=5),
             health_check_unhealthy_threshold=dict(required=False, type='int',
                                                   default=1),
+            ssl_policy_name=dict(required=False, type='str', default=''),
             state=dict(required=True,  type='str'),
         ),
         supports_check_mode=True
