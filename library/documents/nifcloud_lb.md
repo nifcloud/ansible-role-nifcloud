@@ -37,6 +37,7 @@ Create, update filter, register/deregister instances a load balancer of NIFCLOUD
 | health_check_target              | no       | "ICMP"     | str  |                       | Health check protocol and port                                                        |
 | health_check_interval            | no       | 5          | int  |                       | Interval of health check (second)                                                     |
 | health_check_unhealthy_threshold | no       | 1          | int  |                       | Threshold of unhealthy                                                                |
+| ssl_policy_name                  | no       | ""         | str  |                       | SSL policy template name                                                              |
 | state                            | yes      |            | str  | "present" only        | Goal status                                                                           |
 
 ## Examples
