@@ -1,0 +1,9 @@
+---
+# file: tasks/ubuntu20.yml
+
+- name: Install python3-pip (for Ubuntu >=20.04)
+  run_once: true
+  become: yes
+  local_action:
+    module: apt
+    name: python3-pip
