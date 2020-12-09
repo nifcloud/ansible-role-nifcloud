@@ -10,7 +10,10 @@
   when: ansible_distribution == 'CentOS'
 
 - include: ubuntu.yml
-  when: ansible_distribution == 'Ubuntu'
+  when: ansible_distribution == 'Ubuntu' and ansible_distribution_major_version < '20'
+
+- include: ubuntu20.yml
+  when: ansible_distribution == 'Ubuntu' and ansible_distribution_major_version >= '20'
 
 - name: Install "Requests" python package
   run_once: true
