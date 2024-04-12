@@ -1,7 +1,7 @@
 galaxy_info:
   author: NIFCLOUD Team
   description: Ansible role for importing module of NIFCLOUD
-  company: FUJITSU CLOUD TECHNOLOGIES LIMITED
+  company: Fujitsu
   license: Apache License, Version 2.0
   min_ansible_version: 1.9.4
   platforms:
