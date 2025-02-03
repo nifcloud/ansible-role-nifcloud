@@ -463,7 +463,7 @@ class LoadBalancerManager:
 
         ssl_policy = res['xml_body'].find(
             './/{{{nc}}}SSLPolicy'.format(**res['xml_namespace']))
-        
+
         current = ''
         if ssl_policy is not None:
             current = ssl_policy.find(

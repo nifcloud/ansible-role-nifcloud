@@ -1,0 +1,31 @@
+---
+name: Syntax Check
+
+on: [workflow_call]
+
+jobs:
+  build:
+    name: Syntax Check
+    runs-on: ubuntu-20.04
+    strategy:
+      matrix:
+        python-version: ["3.6.15"]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install dependences from pip
+        shell: bash
+        run: |
+          pip install ansible flake8
+          ansible --version
+          printf '[defaults]\nroles_path=../' >ansible.cfg
+      - name: Run syntax check for basic role
+        shell: bash
+        run: ansible-playbook tests/test.yml -i tests/inventory --syntax-check
+        
+      - name: Run flake8 for module codes
+        shell: bash
+        run: flake8 library/*.py
