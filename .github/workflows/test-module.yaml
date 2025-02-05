@@ -18,11 +18,11 @@ jobs:
         python-version: ${{ matrix.python-version }}
     - name: Install dependences from pip
       shell: bash
-      run: pip install ansible nose coveralls mock requests coverage
+      run: pip install ansible pytest coveralls mock requests coverage
     - name: NIFCLOUD modules check
       shell: bash
       run: |
-        nosetests --no-byte-compile --with-coverage --cover-package=library/ --where=library/
+        coverage run --source=library -m pytest library/tests/
         coverage xml
     - name: Coveralls
       uses: coverallsapp/github-action@v2
