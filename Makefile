@@ -5,6 +5,5 @@ build:
 	docker build -t ${IMAGE_NAME} .
 test:
 	make build
-	docker run --workdir /work/library --rm -ti -v $(PWD):/work ${IMAGE_NAME} bash -c " \
-          nosetests --no-byte-compile --with-coverage && \
-          coverage report --include=./nifcloud*.py"
+	docker run --workdir /work/ --rm -ti -v $(PWD):/work ${IMAGE_NAME} bash -c " \
+          coverage run --source=library -m pytest library/tests/"

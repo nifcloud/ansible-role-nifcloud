@@ -1,3 +1,3 @@
-FROM python:2.7
-RUN pip install ansible coverage nose mock requests
+FROM python:3.6.15
+RUN pip install ansible coverage pytest mock requests pytest-cov
 WORKDIR /work
