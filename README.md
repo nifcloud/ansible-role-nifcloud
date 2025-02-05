@@ -10,7 +10,7 @@ Requirements
 ------------
 
 * Distribution = CentOS / Ubuntu
-* python >= 2.6 or 3.x (localhost)
+* python >= 3.6.15
 
 Role Variables
 --------------
